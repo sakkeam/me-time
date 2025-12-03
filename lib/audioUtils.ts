@@ -12,8 +12,10 @@ export class AudioRecorder {
   async start() {
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // OpenAI Realtime API expects 24kHz audio
-      this.audioContext = new AudioContext({ sampleRate: 24000 });
+      // Use system sample rate to avoid connection errors
+      this.audioContext = new AudioContext();
+      const sourceSampleRate = this.audioContext.sampleRate;
+      
       this.input = this.audioContext.createMediaStreamSource(this.stream);
       
       // Use ScriptProcessor for raw audio access
@@ -22,12 +24,33 @@ export class AudioRecorder {
       
       this.processor.onaudioprocess = (e) => {
         const inputData = e.inputBuffer.getChannelData(0);
-        // Convert Float32 to Int16 PCM
-        const pcmData = new Int16Array(inputData.length);
-        for (let i = 0; i < inputData.length; i++) {
-          // Clamp to [-1, 1] and scale to Int16 range
-          const s = Math.max(-1, Math.min(1, inputData[i]));
-          pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        const targetSampleRate = 24000;
+        
+        // Resample if necessary
+        let pcmData: Int16Array;
+        
+        if (sourceSampleRate === targetSampleRate) {
+          pcmData = new Int16Array(inputData.length);
+          for (let i = 0; i < inputData.length; i++) {
+            const s = Math.max(-1, Math.min(1, inputData[i]));
+            pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+        } else {
+          const ratio = sourceSampleRate / targetSampleRate;
+          const newLength = Math.floor(inputData.length / ratio);
+          pcmData = new Int16Array(newLength);
+          
+          for (let i = 0; i < newLength; i++) {
+            const offset = i * ratio;
+            const index = Math.floor(offset);
+            const nextIndex = Math.min(index + 1, inputData.length - 1);
+            const fraction = offset - index;
+            
+            // Linear interpolation
+            const sample = inputData[index] * (1 - fraction) + inputData[nextIndex] * fraction;
+            const s = Math.max(-1, Math.min(1, sample));
+            pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
         }
         
         // Convert to Base64
