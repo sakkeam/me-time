@@ -1,34 +1,29 @@
 'use client';
 
 import { useRealtime } from '@/contexts/RealtimeContext';
-import { useEffect, useRef } from 'react';
 
 export default function TranscriptionDisplay() {
   const { transcriptionItems, currentDelta, isConnected, startSession, stopSession, error } = useRealtime();
-  const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [transcriptionItems, currentDelta]);
+  // Get the text to display: either the current delta (speaking) or the last completed item
+  const displayText = currentDelta || transcriptionItems[transcriptionItems.length - 1]?.text;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 p-4 z-50 pointer-events-none">
-      <div className="max-w-3xl mx-auto pointer-events-auto">
+    <div className="absolute bottom-8 left-0 right-0 px-4 z-50 pointer-events-none">
+      <div className="max-w-3xl mx-auto pointer-events-auto flex flex-col items-center gap-4">
         {/* Controls */}
-        <div className="flex justify-center mb-4 gap-2">
+        <div className="flex justify-center gap-2">
           {!isConnected ? (
             <button
               onClick={startSession}
-              className="px-6 py-2 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-colors font-medium"
+              className="px-6 py-2 bg-blue-600/90 hover:bg-blue-700 text-white rounded-full shadow-lg backdrop-blur-sm transition-all font-medium text-sm"
             >
               Start Conversation
             </button>
           ) : (
             <button
               onClick={stopSession}
-              className="px-6 py-2 bg-red-600 text-white rounded-full shadow-lg hover:bg-red-700 transition-colors font-medium"
+              className="px-6 py-2 bg-red-600/90 hover:bg-red-700 text-white rounded-full shadow-lg backdrop-blur-sm transition-all font-medium text-sm"
             >
               Stop
             </button>
@@ -37,29 +32,17 @@ export default function TranscriptionDisplay() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-500/80 text-white px-4 py-2 rounded-lg mb-2 text-center backdrop-blur-sm">
+          <div className="bg-red-500/80 text-white px-4 py-2 rounded-lg text-sm backdrop-blur-sm">
             {error}
           </div>
         )}
 
-        {/* Transcription Area */}
-        {(transcriptionItems.length > 0 || currentDelta) && (
-          <div 
-            ref={scrollRef}
-            className="bg-black/50 backdrop-blur-md rounded-xl p-4 max-h-60 overflow-y-auto text-white shadow-xl transition-all"
-          >
-            <div className="space-y-2">
-              {transcriptionItems.map((item) => (
-                <div key={item.id} className="opacity-90 text-lg">
-                  {item.text}
-                </div>
-              ))}
-              {currentDelta && (
-                <div className="font-bold text-blue-200 text-lg animate-pulse">
-                  {currentDelta}
-                </div>
-              )}
-            </div>
+        {/* Transcription Area - Single Line Overlay */}
+        {displayText && (
+          <div className="bg-black/60 backdrop-blur-md rounded-full px-8 py-3 text-white shadow-2xl transition-all text-center max-w-full">
+            <p className={`text-xl font-medium truncate ${currentDelta ? 'text-blue-200 animate-pulse' : 'text-white/90'}`}>
+              {displayText}
+            </p>
           </div>
         )}
       </div>
