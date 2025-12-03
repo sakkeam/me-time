@@ -34,3 +34,30 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Face Tracking Setup
+
+This project uses MediaPipe Face Landmarker to track your face and control the camera view.
+
+### Prerequisites
+
+- A webcam is required for face tracking.
+- You must allow camera access when prompted by the browser.
+
+### Setup
+
+The MediaPipe model file (`face_landmarker.task`) is required. It is automatically downloaded when you run `pnpm install` (via the `postinstall` script).
+
+If you need to download it manually:
+
+```bash
+node scripts/download-models.js
+```
+
+### Debugging
+
+A debug panel is available in the bottom-right corner of the screen.
+- Click the "Show Debug" button in the top-right to toggle the panel.
+- The panel shows the webcam feed, face landmarks, and tracking statistics (Yaw/Pitch).
+- If the camera is not working, check the error message in the debug panel.
+
