@@ -21,7 +21,10 @@ export default function Home() {
   return (
     <div className="h-screen w-full bg-zinc-50 dark:bg-black">
       <ErrorBoundary>
-        <Canvas camera={{ position: [0, 1.4, 1.5], fov: 40 }}>
+        <Canvas
+          camera={{ position: [0, 1.4, 1.5], fov: 40 }}
+          onCreated={(state) => state.camera.lookAt(0, 1.4, 0)}
+        >
           <ambientLight intensity={0.5} />
           <directionalLight position={[1, 1, 1]} intensity={1} />
           <Suspense fallback={<Loader />}>
