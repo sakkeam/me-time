@@ -7,6 +7,7 @@ export default function DebugPanel() {
   const { 
     yaw, 
     pitch, 
+    x, y, z,
     isDetecting, 
     isLoading, 
     error, 
@@ -43,6 +44,18 @@ export default function DebugPanel() {
             <div className="flex justify-between">
               <span className="text-gray-400">Pitch:</span>
               <span>{(pitch * 180 / Math.PI).toFixed(1)}°</span>
+            </div>
+            <div className="flex justify-between border-t border-gray-700 pt-1 mt-1">
+              <span className="text-gray-400">Pos X:</span>
+              <span>{x.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Pos Y:</span>
+              <span>{y.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Pos Z:</span>
+              <span>{z.toFixed(2)}</span>
             </div>
             
             {isLoading && (

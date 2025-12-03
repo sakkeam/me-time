@@ -8,6 +8,12 @@ export interface FaceRotation {
   roll: number;
 }
 
+export interface FacePosition {
+  x: number;
+  y: number;
+  z: number;
+}
+
 /**
  * Calculate face rotation (yaw, pitch, roll) from MediaPipe landmarks
  * Using specific landmarks for better stability
@@ -54,6 +60,40 @@ export function calculateFaceRotation(landmarks: NormalizedLandmark[]): FaceRota
 }
 
 /**
+ * Calculate face position (x, y, z) from MediaPipe landmarks
+ * Returns normalized coordinates (-1 to 1)
+ */
+export function calculateFacePosition(landmarks: NormalizedLandmark[]): FacePosition {
+  const nose = landmarks[1];
+  const rightEye = landmarks[263];
+  const leftEye = landmarks[33];
+
+  // X: -1 (left) to 1 (right)
+  // Invert X because webcam is mirrored usually, but let's keep it raw here
+  // and handle mirroring in the camera logic if needed.
+  // Actually, if I move right in the frame, x increases.
+  const x = (nose.x - 0.5) * 2;
+
+  // Y: -1 (top) to 1 (bottom)
+  const y = (nose.y - 0.5) * 2;
+
+  // Z: Estimate depth based on eye distance
+  // Closer = larger distance = smaller Z value (closer to camera)
+  // Farther = smaller distance = larger Z value
+  const eyeDistance = Math.sqrt(
+    Math.pow(rightEye.x - leftEye.x, 2) + 
+    Math.pow(rightEye.y - leftEye.y, 2)
+  );
+  
+  // Normalize Z around 0. 
+  // Typical eye distance at "normal" distance might be around 0.15?
+  // Let's say 0.15 is "0", larger is negative (closer), smaller is positive (farther)
+  const z = (0.15 - eyeDistance) * 5;
+
+  return { x, y, z };
+}
+
+/**
  * Clamp rotation values to prevent extreme camera angles
  */
 export function clampRotation(rotation: FaceRotation): FaceRotation {
@@ -69,29 +109,37 @@ export function clampRotation(rotation: FaceRotation): FaceRotation {
 
 /**
  * Convert spherical coordinates (yaw, pitch) to Cartesian coordinates (x, y, z)
- * for camera position orbiting around a target
+ * for camera position orbiting around a target, with positional offset
  */
 export function getCameraPosition(
   yaw: number, 
   pitch: number, 
   radius: number, 
-  center: [number, number, number]
+  center: [number, number, number],
+  offset: { x: number, y: number, z: number } = { x: 0, y: 0, z: 0 }
 ): [number, number, number] {
   // Invert yaw to mirror movement (natural feel)
-  // or keep as is depending on preference. Let's try mirroring first.
   const targetYaw = -yaw;
   const targetPitch = pitch;
 
   // Calculate position on sphere
-  // x = r * sin(yaw) * cos(pitch)
-  // y = r * sin(pitch) + center_y
-  // z = r * cos(yaw) * cos(pitch)
-  
-  const x = radius * Math.sin(targetYaw) * Math.cos(targetPitch);
-  const y = radius * Math.sin(targetPitch) + center[1];
-  const z = radius * Math.cos(targetYaw) * Math.cos(targetPitch);
+  const sphereX = radius * Math.sin(targetYaw) * Math.cos(targetPitch);
+  const sphereY = radius * Math.sin(targetPitch);
+  const sphereZ = radius * Math.cos(targetYaw) * Math.cos(targetPitch);
 
-  return [x + center[0], y, z + center[2]];
+  // Apply positional offset (parallax effect)
+  // If user moves right (positive x), camera should move right (positive x)
+  // If user moves up (negative y in screen space, but let's check), camera moves up
+  // Scale the offset to be reasonable
+  const offsetX = offset.x * 0.5; // Scale factor
+  const offsetY = -offset.y * 0.5; // Invert Y because screen Y is top-down
+  const offsetZ = offset.z * 0.5;
+
+  return [
+    sphereX + center[0] + offsetX, 
+    sphereY + center[1] + offsetY, 
+    sphereZ + center[2] + offsetZ
+  ];
 }
 
 /**

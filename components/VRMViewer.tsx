@@ -10,11 +10,14 @@ import * as THREE from 'three'
 
 export default function VRMViewer() {
   const { camera } = useThree()
-  const { yaw, pitch } = useFaceTracking()
+  const { yaw, pitch, x, y, z } = useFaceTracking()
   
-  // Store current camera rotation for smoothing
+  // Store current camera rotation and position for smoothing
   const currentYaw = useRef(0)
   const currentPitch = useRef(0)
+  const currentX = useRef(0)
+  const currentY = useRef(0)
+  const currentZ = useRef(0)
 
   const gltf = useLoader(GLTFLoader, '/assets/AliciaSolid.vrm', (loader) => {
     loader.register((parser) => {
@@ -37,17 +40,23 @@ export default function VRMViewer() {
     // Smoothly interpolate current rotation towards target rotation
     currentYaw.current = lerp(currentYaw.current, yaw, 0.1)
     currentPitch.current = lerp(currentPitch.current, pitch, 0.1)
+    
+    // Smoothly interpolate current position offset
+    currentX.current = lerp(currentX.current, x, 0.1)
+    currentY.current = lerp(currentY.current, y, 0.1)
+    currentZ.current = lerp(currentZ.current, z, 0.1)
 
     // Calculate new camera position
-    const [x, y, z] = getCameraPosition(
+    const [camX, camY, camZ] = getCameraPosition(
       currentYaw.current,
       currentPitch.current,
       1.5, // Radius
-      [0, 1.4, 0] // Center target
+      [0, 1.4, 0], // Center target
+      { x: currentX.current, y: currentY.current, z: currentZ.current } // Positional offset
     )
 
     // Update camera position and look at target
-    camera.position.set(x, y, z)
+    camera.position.set(camX, camY, camZ)
     camera.lookAt(0, 1.4, 0)
   })
 

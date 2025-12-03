@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FaceLandmarker, FilesetResolver, DrawingUtils } from '@mediapipe/tasks-vision';
 import { useFaceTracking } from '@/contexts/FaceTrackingContext';
-import { calculateFaceRotation, clampRotation } from '@/lib/faceUtils';
+import { calculateFaceRotation, calculateFacePosition, clampRotation } from '@/lib/faceUtils';
 
 export default function FaceTracking() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -14,6 +14,7 @@ export default function FaceTracking() {
   
   const { 
     setRotation, 
+    setPosition,
     setIsDetecting, 
     setIsLoading, 
     setError, 
@@ -104,8 +105,12 @@ export default function FaceTracking() {
           const rawRotation = calculateFaceRotation(landmarks);
           const clamped = clampRotation(rawRotation);
           
+          // Calculate position
+          const position = calculateFacePosition(landmarks);
+
           // Update context
           setRotation(clamped.yaw, clamped.pitch, clamped.roll);
+          setPosition(position.x, position.y, position.z);
 
           // Draw landmarks if debug mode is on
           if (showDebug) {

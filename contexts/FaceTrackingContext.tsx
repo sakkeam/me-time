@@ -6,6 +6,9 @@ interface FaceTrackingState {
   yaw: number;
   pitch: number;
   roll: number;
+  x: number;
+  y: number;
+  z: number;
   isDetecting: boolean;
   isLoading: boolean;
   error: string | null;
@@ -15,6 +18,7 @@ interface FaceTrackingState {
 
 interface FaceTrackingContextType extends FaceTrackingState {
   setRotation: (yaw: number, pitch: number, roll: number) => void;
+  setPosition: (x: number, y: number, z: number) => void;
   setIsDetecting: (isDetecting: boolean) => void;
   setIsLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
@@ -28,6 +32,9 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
   const [yaw, setYaw] = useState(0);
   const [pitch, setPitch] = useState(0);
   const [roll, setRoll] = useState(0);
+  const [x, setX] = useState(0);
+  const [y, setY] = useState(0);
+  const [z, setZ] = useState(0);
   const [isDetecting, setIsDetecting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +47,12 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
     setYaw(newYaw);
     setPitch(newPitch);
     setRoll(newRoll);
+  };
+
+  const setPosition = (newX: number, newY: number, newZ: number) => {
+    setX(newX);
+    setY(newY);
+    setZ(newZ);
   };
 
   const setShowDebug = (show: boolean) => {
@@ -63,12 +76,16 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         yaw,
         pitch,
         roll,
+        x,
+        y,
+        z,
         isDetecting,
         isLoading,
         error,
         permissionDenied,
         showDebug,
         setRotation,
+        setPosition,
         setIsDetecting,
         setIsLoading,
         setError,
