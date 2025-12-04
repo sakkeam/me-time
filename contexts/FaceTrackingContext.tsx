@@ -14,6 +14,11 @@ interface FaceTrackingState {
   error: string | null;
   permissionDenied: boolean;
   showDebug: boolean;
+  // Hand tracking state
+  cursorX: number;
+  cursorY: number;
+  isClicking: boolean;
+  isHandDetected: boolean;
 }
 
 interface FaceTrackingContextType extends FaceTrackingState {
@@ -24,6 +29,10 @@ interface FaceTrackingContextType extends FaceTrackingState {
   setError: (error: string | null) => void;
   setPermissionDenied: (denied: boolean) => void;
   setShowDebug: (show: boolean) => void;
+  // Hand tracking setters
+  setCursorPosition: (x: number, y: number) => void;
+  setIsClicking: (clicking: boolean) => void;
+  setIsHandDetected: (detected: boolean) => void;
 }
 
 const FaceTrackingContext = createContext<FaceTrackingContextType | undefined>(undefined);
@@ -40,6 +49,12 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
   
+  // Hand tracking state
+  const [cursorX, setCursorX] = useState(0);
+  const [cursorY, setCursorY] = useState(0);
+  const [isClicking, setIsClicking] = useState(false);
+  const [isHandDetected, setIsHandDetected] = useState(false);
+  
   // Initialize debug state from localStorage if available
   const [showDebug, setShowDebugState] = useState(false);
 
@@ -53,6 +68,11 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
     setX(newX);
     setY(newY);
     setZ(newZ);
+  };
+
+  const setCursorPosition = (newX: number, newY: number) => {
+    setCursorX(newX);
+    setCursorY(newY);
   };
 
   const setShowDebug = (show: boolean) => {
@@ -84,6 +104,10 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         error,
         permissionDenied,
         showDebug,
+        cursorX,
+        cursorY,
+        isClicking,
+        isHandDetected,
         setRotation,
         setPosition,
         setIsDetecting,
@@ -91,6 +115,9 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         setError,
         setPermissionDenied,
         setShowDebug,
+        setCursorPosition,
+        setIsClicking,
+        setIsHandDetected,
       }}
     >
       {children}

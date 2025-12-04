@@ -14,6 +14,11 @@ export interface FacePosition {
   z: number;
 }
 
+export interface HandCursorPosition {
+  x: number;
+  y: number;
+}
+
 /**
  * Calculate face rotation (yaw, pitch, roll) from MediaPipe landmarks
  * Using specific landmarks for better stability
@@ -91,6 +96,71 @@ export function calculateFacePosition(landmarks: NormalizedLandmark[]): FacePosi
   const z = (0.15 - eyeDistance) * 5;
 
   return { x, y, z };
+}
+
+/**
+ * Calculate cursor position from hand landmarks
+ * Uses index finger tip (landmark 8) for cursor position
+ * Returns screen coordinates (0 to window dimensions)
+ */
+export function calculateCursorPosition(
+  landmarks: NormalizedLandmark[],
+  videoWidth: number,
+  videoHeight: number
+): HandCursorPosition {
+  // Index finger tip is landmark 8
+  const indexFingerTip = landmarks[8];
+  
+  // Convert from normalized coordinates to screen coordinates
+  // Mirror X axis for natural interaction (webcam is mirrored)
+  const screenX = (1 - indexFingerTip.x) * window.innerWidth;
+  const screenY = indexFingerTip.y * window.innerHeight;
+  
+  return { x: screenX, y: screenY };
+}
+
+/**
+ * Calculate distance between two landmarks (for pinch detection)
+ * Returns normalized distance
+ */
+export function calculateLandmarkDistance(
+  landmark1: NormalizedLandmark,
+  landmark2: NormalizedLandmark
+): number {
+  return Math.sqrt(
+    Math.pow(landmark1.x - landmark2.x, 2) +
+    Math.pow(landmark1.y - landmark2.y, 2) +
+    Math.pow(landmark1.z - landmark2.z, 2)
+  );
+}
+
+/**
+ * Detect pinch gesture (thumb tip to index finger tip)
+ * Returns true if pinching
+ */
+export function detectPinch(landmarks: NormalizedLandmark[], threshold: number = 0.04): boolean {
+  // Thumb tip is landmark 4
+  // Index finger tip is landmark 8
+  const thumbTip = landmarks[4];
+  const indexTip = landmarks[8];
+  
+  const distance = calculateLandmarkDistance(thumbTip, indexTip);
+  
+  return distance < threshold;
+}
+
+/**
+ * Smooth cursor movement using exponential moving average
+ */
+export function smoothCursorPosition(
+  current: HandCursorPosition,
+  target: HandCursorPosition,
+  smoothingFactor: number = 0.3
+): HandCursorPosition {
+  return {
+    x: lerp(current.x, target.x, smoothingFactor),
+    y: lerp(current.y, target.y, smoothingFactor)
+  };
 }
 
 /**

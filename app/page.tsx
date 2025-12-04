@@ -10,6 +10,7 @@ import FaceTracking from '@/components/FaceTracking'
 import DebugPanel from '@/components/DebugPanel'
 import { RealtimeProvider } from '@/contexts/RealtimeContext'
 import TranscriptionDisplay from '@/components/TranscriptionDisplay'
+import VirtualCursor from '@/components/VirtualCursor'
 
 function Loader() {
   const { progress } = useProgress()
@@ -42,6 +43,7 @@ export default function Home() {
           
           {/* Face Tracking Components */}
           <FaceTracking />
+          <VirtualCursor />
           <DebugPanel />
           <TranscriptionDisplay />
         </div>

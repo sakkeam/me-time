@@ -1,16 +1,26 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react';
-import { FaceLandmarker, FilesetResolver, DrawingUtils } from '@mediapipe/tasks-vision';
+import { FaceLandmarker, HandLandmarker, FilesetResolver, DrawingUtils } from '@mediapipe/tasks-vision';
 import { useFaceTracking } from '@/contexts/FaceTrackingContext';
-import { calculateFaceRotation, calculateFacePosition, clampRotation } from '@/lib/faceUtils';
+import { 
+  calculateFaceRotation, 
+  calculateFacePosition, 
+  clampRotation,
+  calculateCursorPosition,
+  detectPinch,
+  smoothCursorPosition,
+  HandCursorPosition
+} from '@/lib/faceUtils';
 
 export default function FaceTracking() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(null);
+  const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(null);
   const requestRef = useRef<number>(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const smoothedCursorRef = useRef<HandCursorPosition>({ x: 0, y: 0 });
   
   const { 
     setRotation, 
@@ -19,7 +29,10 @@ export default function FaceTracking() {
     setIsLoading, 
     setError, 
     setPermissionDenied,
-    showDebug
+    showDebug,
+    setCursorPosition,
+    setIsClicking,
+    setIsHandDetected
   } = useFaceTracking();
 
   // Initialize MediaPipe Face Landmarker
@@ -40,11 +53,22 @@ export default function FaceTracking() {
           numFaces: 1
         });
         
+        // Initialize Hand Landmarker
+        const handLandmarkerInstance = await HandLandmarker.createFromOptions(filesetResolver, {
+          baseOptions: {
+            modelAssetPath: "/models/hand_landmarker.task",
+            delegate: "GPU"
+          },
+          runningMode: "VIDEO",
+          numHands: 1
+        });
+        
         setFaceLandmarker(landmarker);
+        setHandLandmarker(handLandmarkerInstance);
         setIsLoading(false);
       } catch (err) {
         console.error("Error initializing MediaPipe:", err);
-        setError("Failed to load face tracking model");
+        setError("Failed to load tracking models");
         setIsLoading(false);
       }
     };
@@ -58,7 +82,7 @@ export default function FaceTracking() {
 
   // Start Webcam
   useEffect(() => {
-    if (!faceLandmarker) return;
+    if (!faceLandmarker || !handLandmarker) return;
 
     const startWebcam = async () => {
       try {
@@ -78,10 +102,10 @@ export default function FaceTracking() {
     };
 
     startWebcam();
-  }, [faceLandmarker]);
+  }, [faceLandmarker, handLandmarker]);
 
   const predictWebcam = () => {
-    if (!faceLandmarker || !videoRef.current || !canvasRef.current) return;
+    if (!faceLandmarker || !handLandmarker || !videoRef.current || !canvasRef.current) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -92,14 +116,19 @@ export default function FaceTracking() {
     intervalRef.current = setInterval(() => {
       if (video.currentTime > 0 && !video.paused && !video.ended) {
         const startTimeMs = performance.now();
-        const results = faceLandmarker.detectForVideo(video, startTimeMs);
+        
+        // Detect face
+        const faceResults = faceLandmarker.detectForVideo(video, startTimeMs);
+        
+        // Detect hand
+        const handResults = handLandmarker.detectForVideo(video, startTimeMs);
 
         // Clear canvas
         ctx!.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+        if (faceResults.faceLandmarks && faceResults.faceLandmarks.length > 0) {
           setIsDetecting(true);
-          const landmarks = results.faceLandmarks[0];
+          const landmarks = faceResults.faceLandmarks[0];
 
           // Calculate rotation
           const rawRotation = calculateFaceRotation(landmarks);
@@ -147,6 +176,59 @@ export default function FaceTracking() {
           }
         } else {
           setIsDetecting(false);
+        }
+
+        // Process hand results
+        if (handResults.landmarks && handResults.landmarks.length > 0) {
+          setIsHandDetected(true);
+          const handLandmarks = handResults.landmarks[0];
+
+          // Calculate cursor position
+          const rawCursorPos = calculateCursorPosition(handLandmarks, video.videoWidth, video.videoHeight);
+          
+          // Smooth cursor movement
+          const smoothedPos = smoothCursorPosition(smoothedCursorRef.current, rawCursorPos, 0.3);
+          smoothedCursorRef.current = smoothedPos;
+          
+          // Update cursor position
+          setCursorPosition(smoothedPos.x, smoothedPos.y);
+
+          // Detect pinch gesture
+          const isPinching = detectPinch(handLandmarks, 0.04);
+          setIsClicking(isPinching);
+
+          // Draw hand landmarks if debug mode is on
+          if (showDebug) {
+            // Draw connections
+            drawingUtils.drawConnectors(
+              handLandmarks,
+              HandLandmarker.HAND_CONNECTIONS,
+              { color: "#00FF00", lineWidth: 2 }
+            );
+            
+            // Draw landmarks
+            drawingUtils.drawLandmarks(
+              handLandmarks,
+              { color: "#FF0000", lineWidth: 1, radius: 3 }
+            );
+
+            // Draw cursor indicator at index finger tip
+            const indexTip = handLandmarks[8];
+            ctx!.beginPath();
+            ctx!.arc(
+              indexTip.x * canvas.width,
+              indexTip.y * canvas.height,
+              10,
+              0,
+              2 * Math.PI
+            );
+            ctx!.strokeStyle = isPinching ? "#FF00FF" : "#00FFFF";
+            ctx!.lineWidth = 3;
+            ctx!.stroke();
+          }
+        } else {
+          setIsHandDetected(false);
+          setIsClicking(false);
         }
       }
     }, 33);
