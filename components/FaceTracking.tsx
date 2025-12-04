@@ -7,7 +7,7 @@ import {
   calculateFaceRotation, 
   calculateFacePosition, 
   clampRotation,
-  calculateCursorPosition,
+  calculateStableCursorPosition,
   detectPinch,
   smoothCursorPosition,
   HandCursorPosition
@@ -184,7 +184,7 @@ export default function FaceTracking() {
           const handLandmarks = handResults.landmarks[0];
 
           // Calculate cursor position
-          const rawCursorPos = calculateCursorPosition(handLandmarks, video.videoWidth, video.videoHeight);
+          const rawCursorPos = calculateStableCursorPosition(handLandmarks, video.videoWidth, video.videoHeight);
           
           // Smooth cursor movement
           const smoothedPos = smoothCursorPosition(smoothedCursorRef.current, rawCursorPos, 0.3);
@@ -212,12 +212,22 @@ export default function FaceTracking() {
               { color: "#FF0000", lineWidth: 1, radius: 3 }
             );
 
-            // Draw cursor indicator at index finger tip
-            const indexTip = handLandmarks[8];
+            // Draw cursor indicator at projected position
+            // We need to recalculate the projected position in canvas coordinates for visualization
+            // Or just use the smoothed position we already calculated
+            // Since smoothedPos is in screen coordinates, we need to convert back to canvas coordinates
+            // Canvas is 320x240, Screen is window.innerWidth x window.innerHeight
+            
+            const canvasX = (smoothedPos.x / window.innerWidth) * canvas.width;
+            // Mirror X for display
+            const mirroredCanvasX = canvas.width - canvasX;
+            
+            const canvasY = (smoothedPos.y / window.innerHeight) * canvas.height;
+
             ctx!.beginPath();
             ctx!.arc(
-              indexTip.x * canvas.width,
-              indexTip.y * canvas.height,
+              mirroredCanvasX,
+              canvasY,
               10,
               0,
               2 * Math.PI
@@ -225,6 +235,16 @@ export default function FaceTracking() {
             ctx!.strokeStyle = isPinching ? "#FF00FF" : "#00FFFF";
             ctx!.lineWidth = 3;
             ctx!.stroke();
+            
+            // Draw line from MCP to projected tip to visualize the projection
+            const indexMCP = handLandmarks[5];
+            ctx!.beginPath();
+            ctx!.moveTo(indexMCP.x * canvas.width, indexMCP.y * canvas.height);
+            ctx!.lineTo(mirroredCanvasX, canvasY);
+            ctx!.strokeStyle = "#FFFF00";
+            ctx!.setLineDash([5, 5]);
+            ctx!.stroke();
+            ctx!.setLineDash([]);
           }
         } else {
           setIsHandDetected(false);

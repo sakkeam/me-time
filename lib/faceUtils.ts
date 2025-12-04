@@ -120,6 +120,37 @@ export function calculateCursorPosition(
 }
 
 /**
+ * Calculate a stable cursor position that doesn't move when pinching.
+ * Uses the Wrist (0) and Index MCP (5) to project a virtual finger tip.
+ */
+export function calculateStableCursorPosition(
+  landmarks: NormalizedLandmark[],
+  videoWidth: number,
+  videoHeight: number
+): HandCursorPosition {
+  const wrist = landmarks[0];
+  const indexMCP = landmarks[5];
+
+  // Calculate vector from wrist to MCP
+  // This gives us the direction the hand is pointing
+  const directionX = indexMCP.x - wrist.x;
+  const directionY = indexMCP.y - wrist.y;
+
+  // Project outwards from the MCP to simulate a "stiff" finger tip
+  // A scale of ~1.5 approximates the length of the finger
+  const projectionScale = 1.5; 
+  
+  const virtualTipX = indexMCP.x + (directionX * projectionScale);
+  const virtualTipY = indexMCP.y + (directionY * projectionScale);
+
+  // Convert to screen coordinates (mirroring X)
+  const screenX = (1 - virtualTipX) * window.innerWidth;
+  const screenY = virtualTipY * window.innerHeight;
+
+  return { x: screenX, y: screenY };
+}
+
+/**
  * Calculate distance between two landmarks (for pinch detection)
  * Returns normalized distance
  */
