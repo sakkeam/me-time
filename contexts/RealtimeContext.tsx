@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { AudioRecorder } from '@/lib/audioUtils';
+import { AudioRecorder, AudioPlayer } from '@/lib/audioUtils';
 
 interface RealtimeContextType {
   isConnected: boolean;
@@ -13,6 +13,14 @@ interface RealtimeContextType {
   assistantResponses: TranscriptionItem[];
   currentAssistantDelta: string;
   error: string | null;
+  selectedVoice: string;
+  setSelectedVoice: (voice: string) => void;
+  VOICES: typeof VOICES;
+  isAssistantSpeaking: boolean;
+  isAudioPaused: boolean;
+  interruptAudio: () => void;
+  pauseAudio: () => void;
+  resumeAudio: () => void;
 }
 
 interface TranscriptionItem {
@@ -20,6 +28,17 @@ interface TranscriptionItem {
   text: string;
   timestamp: number;
 }
+
+export const VOICES = [
+  { id: 'alloy', label: 'Alloy' },
+  { id: 'echo', label: 'Echo' },
+  { id: 'shimmer', label: 'Shimmer' },
+  { id: 'ash', label: 'Ash' },
+  { id: 'ballad', label: 'Ballad' },
+  { id: 'coral', label: 'Coral' },
+  { id: 'sage', label: 'Sage' },
+  { id: 'verse', label: 'Verse' },
+] as const;
 
 const RealtimeContext = createContext<RealtimeContextType | undefined>(undefined);
 
@@ -31,16 +50,77 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const [assistantResponses, setAssistantResponses] = useState<TranscriptionItem[]>([]);
   const [currentAssistantDelta, setCurrentAssistantDelta] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [selectedVoice, setSelectedVoiceState] = useState<string>('alloy');
+  const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
+  const [isAudioPaused, setIsAudioPaused] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
+  const audioPlayerRef = useRef<AudioPlayer | null>(null);
   const currentItemIdRef = useRef<string | null>(null);
   const currentResponseIdRef = useRef<string | null>(null);
+
+  // Initialize audio player
+  useEffect(() => {
+    audioPlayerRef.current = new AudioPlayer((isPlaying) => {
+      setIsAssistantSpeaking(isPlaying);
+    });
+    return () => {
+      audioPlayerRef.current?.stop();
+    };
+  }, []);
+
+  const interruptAudio = useCallback(() => {
+    audioPlayerRef.current?.interrupt();
+    setIsAudioPaused(false);
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+            type: 'response.cancel'
+        }));
+    }
+  }, []);
+
+  const pauseAudio = useCallback(() => {
+    audioPlayerRef.current?.pause();
+    setIsAudioPaused(true);
+  }, []);
+
+  const resumeAudio = useCallback(() => {
+    audioPlayerRef.current?.resume();
+    setIsAudioPaused(false);
+  }, []);
+
+  // Load saved voice preference
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('selectedVoice');
+      if (saved && VOICES.some(v => v.id === saved)) {
+        setSelectedVoiceState(saved);
+      }
+    }
+  }, []);
+
+  const setSelectedVoice = useCallback((voice: string) => {
+    setSelectedVoiceState(voice);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedVoice', voice);
+    }
+
+    // Update active session if connected
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'session.update',
+        session: {
+          voice: voice
+        }
+      }));
+    }
+  }, []);
 
   const connect = useCallback(async () => {
     try {
       // Get ephemeral token
-      const tokenResponse = await fetch('/api/realtime-token', {
+      const tokenResponse = await fetch(`/api/realtime-token?voice=${selectedVoice}`, {
         method: 'POST',
       });
       
@@ -66,6 +146,8 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         ws.send(JSON.stringify({
           type: 'session.update',
           session: {
+            modalities: ['text', 'audio'],
+            voice: selectedVoice,
             input_audio_transcription: {
               model: 'whisper-1',
               language: 'ja'
@@ -86,6 +168,10 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         switch (message.type) {
           case 'session.created':
             console.log('Session created:', message);
+            break;
+
+          case 'input_audio_buffer.speech_started':
+            interruptAudio();
             break;
             
           case 'conversation.item.input_audio_transcription.delta':
@@ -133,6 +219,14 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
               currentResponseIdRef.current = null;
             }
             break;
+
+          case 'response.audio.delta':
+            audioPlayerRef.current?.play(message.delta);
+            break;
+
+          case 'response.audio.done':
+            // Handled by AudioPlayer state change
+            break;
             
           case 'error':
             console.error('Realtime API error:', message);
@@ -158,7 +252,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to connect:', err);
       setError(err instanceof Error ? err.message : 'Failed to connect');
     }
-  }, []);
+  }, [selectedVoice]);
 
   const startSession = async () => {
     setError(null);
@@ -219,7 +313,15 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         currentDelta,
         assistantResponses,
         currentAssistantDelta,
-        error
+        error,
+        selectedVoice,
+        setSelectedVoice,
+        VOICES,
+        isAssistantSpeaking,
+        isAudioPaused,
+        interruptAudio,
+        pauseAudio,
+        resumeAudio
       }}
     >
       {children}

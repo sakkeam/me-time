@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
@@ -8,6 +8,9 @@ export async function POST() {
         { status: 500 }
       );
     }
+
+    const { searchParams } = new URL(request.url);
+    const voice = searchParams.get('voice') || 'alloy';
 
     const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
       method: 'POST',
@@ -17,7 +20,7 @@ export async function POST() {
       },
       body: JSON.stringify({
         model: 'gpt-4o-realtime-preview-2024-12-17',
-        voice: 'alloy',
+        voice: voice,
       }),
     });
 
