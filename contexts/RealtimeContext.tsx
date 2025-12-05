@@ -10,6 +10,8 @@ interface RealtimeContextType {
   stopSession: () => void;
   transcriptionItems: TranscriptionItem[];
   currentDelta: string;
+  assistantResponses: TranscriptionItem[];
+  currentAssistantDelta: string;
   error: string | null;
 }
 
@@ -26,11 +28,14 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const [isRecording, setIsRecording] = useState(false);
   const [transcriptionItems, setTranscriptionItems] = useState<TranscriptionItem[]>([]);
   const [currentDelta, setCurrentDelta] = useState('');
+  const [assistantResponses, setAssistantResponses] = useState<TranscriptionItem[]>([]);
+  const [currentAssistantDelta, setCurrentAssistantDelta] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
   const currentItemIdRef = useRef<string | null>(null);
+  const currentResponseIdRef = useRef<string | null>(null);
 
   const connect = useCallback(async () => {
     try {
@@ -105,6 +110,29 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
               currentItemIdRef.current = null;
             }
             break;
+
+          case 'response.audio_transcript.delta':
+            setCurrentAssistantDelta(prev => prev + message.delta);
+            if (!currentResponseIdRef.current) {
+              currentResponseIdRef.current = message.response_id;
+            }
+            break;
+
+          case 'response.audio_transcript.done':
+            const responseText = message.transcript;
+            if (responseText) {
+              setAssistantResponses(prev => [
+                ...prev,
+                {
+                  id: message.response_id,
+                  text: responseText,
+                  timestamp: Date.now()
+                }
+              ]);
+              setCurrentAssistantDelta('');
+              currentResponseIdRef.current = null;
+            }
+            break;
             
           case 'error':
             console.error('Realtime API error:', message);
@@ -170,6 +198,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     setIsRecording(false);
     setIsConnected(false);
     setCurrentDelta('');
+    setCurrentAssistantDelta('');
   };
 
   // Cleanup on unmount
@@ -188,6 +217,8 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         stopSession,
         transcriptionItems,
         currentDelta,
+        assistantResponses,
+        currentAssistantDelta,
         error
       }}
     >
