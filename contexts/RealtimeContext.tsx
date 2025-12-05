@@ -236,6 +236,12 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
             break;
             
           case 'error':
+            // Ignore specific errors that are expected during normal operation
+            if (message.error?.code === 'cancellation_failed' || 
+                message.error?.message?.includes('no active response found')) {
+              console.warn('Ignored cancellation error:', message);
+              return;
+            }
             console.error('Realtime API error:', message);
             setError(message.error?.message || 'Unknown error');
             break;
