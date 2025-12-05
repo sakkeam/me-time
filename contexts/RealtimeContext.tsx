@@ -73,7 +73,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const interruptAudio = useCallback(() => {
     audioPlayerRef.current?.interrupt();
     setIsAudioPaused(false);
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && currentResponseIdRef.current) {
         wsRef.current.send(JSON.stringify({
             type: 'response.cancel'
         }));
@@ -197,6 +197,14 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
             }
             break;
 
+          case 'response.created':
+            currentResponseIdRef.current = message.response.id;
+            break;
+
+          case 'response.done':
+            currentResponseIdRef.current = null;
+            break;
+
           case 'response.audio_transcript.delta':
             setCurrentAssistantDelta(prev => prev + message.delta);
             if (!currentResponseIdRef.current) {
@@ -216,7 +224,6 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
                 }
               ]);
               setCurrentAssistantDelta('');
-              currentResponseIdRef.current = null;
             }
             break;
 
