@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { AudioRecorder, AudioPlayer } from '@/lib/audioUtils';
-import { useChat } from '@ai-sdk/react';
+import { useChat } from 'ai/react';
 import { useAnimation } from '@/contexts/AnimationContext';
 import { Message } from 'ai';
 
@@ -67,7 +67,8 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const { playAnimation } = useAnimation();
 
   // Voltagent integration
-  const { append, setMessages } = useChat({
+  const chat = useChat({
+    id: 'animation-agent',
     api: '/api/chat',
     onToolCall: ({ toolCall }) => {
       if (toolCall.toolName === 'play_animation') {
@@ -76,6 +77,8 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       }
     },
   });
+  
+  const { append, setMessages } = chat;
 
   // Trigger agent analysis when a new assistant response is complete
   useEffect(() => {
@@ -95,10 +98,15 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         const recentHistory = history.slice(-10);
         
         setMessages(recentHistory);
-        append({ role: 'user', content: 'Analyze the conversation and play an animation if appropriate.' });
+        
+        if (append) {
+          append({ role: 'user', content: 'Analyze the conversation and play an animation if appropriate.' });
+        } else {
+          console.warn('useChat append function is missing', chat);
+        }
       }
     }
-  }, [assistantResponses, transcriptionItems, append, setMessages]);
+  }, [assistantResponses, transcriptionItems, append, setMessages, chat]);
 
   // Initialize audio player
   useEffect(() => {
