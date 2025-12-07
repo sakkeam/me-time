@@ -33,6 +33,29 @@ export default function Home() {
   const [terrainOctaves, setTerrainOctaves] = useState(4)
   const [terrainDebug, setTerrainDebug] = useState(false)
 
+  // Sky Settings
+  const [cloudDensity, setCloudDensity] = useState(0.4)
+  const [cloudCoverage, setCloudCoverage] = useState(0.3)
+  const [cloudSpeed, setCloudSpeed] = useState(0.5)
+  const [noiseOctaves, setNoiseOctaves] = useState(3)
+
+  const setSkyPreset = (preset: 'clear' | 'sunny' | 'cloudy') => {
+    switch (preset) {
+      case 'clear':
+        setCloudCoverage(0.1)
+        setCloudDensity(0.3)
+        break
+      case 'sunny':
+        setCloudCoverage(0.3)
+        setCloudDensity(0.4)
+        break
+      case 'cloudy':
+        setCloudCoverage(0.7)
+        setCloudDensity(0.6)
+        break
+    }
+  }
+
   return (
     <FaceTrackingProvider>
       <AnimationProvider>
@@ -45,7 +68,12 @@ export default function Home() {
               >
                 <ambientLight intensity={0.5} />
                 <directionalLight position={[1, 1, 1]} intensity={1} />
-                <PerlinBackground />
+                <PerlinBackground 
+                  cloudDensity={cloudDensity}
+                  cloudCoverage={cloudCoverage}
+                  cloudSpeed={cloudSpeed}
+                  noiseOctaves={noiseOctaves}
+                />
                 <PerlinTerrain 
                   scale={terrainScale} 
                   amplitude={terrainAmplitude} 
@@ -71,6 +99,17 @@ export default function Home() {
                 setOctaves: setTerrainOctaves,
                 debug: terrainDebug,
                 setDebug: setTerrainDebug
+              }}
+              skySettings={{
+                cloudDensity,
+                setCloudDensity,
+                cloudCoverage,
+                setCloudCoverage,
+                cloudSpeed,
+                setCloudSpeed,
+                noiseOctaves,
+                setNoiseOctaves,
+                setPreset: setSkyPreset
               }}
             />
             <TranscriptionDisplay />

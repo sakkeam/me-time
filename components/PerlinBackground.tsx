@@ -4,6 +4,13 @@ import { useRef, useMemo, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 
+interface PerlinBackgroundProps {
+  cloudDensity?: number
+  cloudCoverage?: number
+  cloudSpeed?: number
+  noiseOctaves?: number
+}
+
 const vertexShader = `
 varying vec2 vUv;
 void main() {
@@ -15,6 +22,11 @@ void main() {
 const fragmentShader = `
 uniform float uTime;
 uniform int uTheme; // 0: Light, 1: Dark
+uniform float uCloudDensity;
+uniform float uCloudCoverage;
+uniform float uCloudSpeed;
+uniform int uNoiseOctaves;
+
 varying vec2 vUv;
 
 // Simplex 3D Noise 
@@ -91,63 +103,103 @@ float snoise(vec3 v){
                                 dot(p2,x2), dot(p3,x3) ) );
 }
 
+float fbm(vec3 x, int octaves) {
+  float v = 0.0;
+  float a = 0.5;
+  vec3 shift = vec3(100.0);
+  for (int i = 0; i < 5; ++i) {
+    if(i >= octaves) break;
+    v += a * snoise(x);
+    x = x * 2.0 + shift;
+    a *= 0.5;
+  }
+  return v;
+}
+
 void main() {
-  // Noise parameters
-  float scale = 2.0;
-  float timeScale = 0.1;
-  
-  // Calculate noise
-  float n = snoise(vec3(vUv * scale, uTime * timeScale));
-  
-  // Add second octave for detail
-  n += 0.5 * snoise(vec3(vUv * scale * 2.0, uTime * timeScale * 1.5));
-  
-  // Normalize noise to 0.0 - 1.0 range roughly
-  n = n * 0.5 + 0.5;
-  
-  // Define colors
-  vec3 color1, color2, color3;
+  // Sky Gradient Colors
+  vec3 skyTop, skyBottom;
+  vec3 cloudColor;
   
   if (uTheme == 1) {
-    // Dark Mode Colors
-    color1 = vec3(0.102, 0.043, 0.180); // #1a0b2e (Deep Purple)
-    color2 = vec3(0.086, 0.129, 0.243); // #16213e (Dark Blue)
-    color3 = vec3(0.059, 0.204, 0.376); // #0f3460 (Navy)
+    // Dark Mode
+    skyTop = vec3(0.05, 0.05, 0.15);    // Deep night blue
+    skyBottom = vec3(0.1, 0.1, 0.25);   // Lighter night blue
+    cloudColor = vec3(0.25, 0.25, 0.3); // Dark grey clouds
   } else {
-    // Light Mode Colors
-    color1 = vec3(0.878, 0.949, 0.996); // #e0f2fe (Light Blue)
-    color2 = vec3(0.729, 0.902, 0.992); // #bae6fd (Sky Blue)
-    color3 = vec3(1.0, 1.0, 1.0);       // #ffffff (White)
+    // Light Mode
+    skyTop = vec3(0.0, 0.4, 0.8);       // Deep blue
+    skyBottom = vec3(0.6, 0.8, 1.0);    // Light blue/white
+    cloudColor = vec3(1.0, 1.0, 1.0);   // White clouds
   }
   
-  // Create gradient based on UV.y and Noise
-  float mixFactor = vUv.y + n * 0.2;
+  // Base Sky Gradient
+  float gradientMix = vUv.y;
+  vec3 skyColor = mix(skyBottom, skyTop, gradientMix);
   
-  vec3 finalColor = mix(color1, color2, smoothstep(0.0, 0.5, mixFactor));
-  finalColor = mix(finalColor, color3, smoothstep(0.5, 1.0, mixFactor));
+  // Cloud Generation
+  float time = uTime * uCloudSpeed * 0.1;
+  vec3 noisePos = vec3(vUv.x * 2.0 + time, vUv.y * 1.5, time * 0.5);
+  
+  // FBM Noise for clouds
+  float noiseVal = fbm(noisePos, uNoiseOctaves);
+  
+  // Normalize noise roughly to 0-1
+  noiseVal = noiseVal * 0.5 + 0.5;
+  
+  // Cloud shape control
+  // uCloudCoverage: 0.0 (clear) to 1.0 (overcast)
+  // Map coverage to a threshold. 
+  // Low coverage -> High threshold (only peaks visible)
+  // High coverage -> Low threshold (valleys visible)
+  float threshold = 1.0 - uCloudCoverage;
+  
+  // Soft edges for clouds
+  // uCloudDensity controls how "thick" or "sharp" the transition is
+  float cloudAlpha = smoothstep(threshold - 0.1, threshold + (1.0 - uCloudDensity) * 0.5, noiseVal);
+  
+  // Fade clouds at horizon (bottom of screen) to blend with terrain/fog
+  cloudAlpha *= smoothstep(0.0, 0.3, vUv.y);
+  
+  // Mix sky and clouds
+  vec3 finalColor = mix(skyColor, cloudColor, cloudAlpha);
   
   gl_FragColor = vec4(finalColor, 1.0);
 }
 `
 
-export default function PerlinBackground() {
+export default function PerlinBackground({
+  cloudDensity = 0.4,
+  cloudCoverage = 0.3,
+  cloudSpeed = 0.5,
+  noiseOctaves = 3
+}: PerlinBackgroundProps) {
   const mesh = useRef<THREE.Mesh>(null)
-  const { viewport } = useThree()
   
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
-      uTheme: { value: 0 }, // Default to Light
+      uTheme: { value: 0 },
+      uCloudDensity: { value: cloudDensity },
+      uCloudCoverage: { value: cloudCoverage },
+      uCloudSpeed: { value: cloudSpeed },
+      uNoiseOctaves: { value: noiseOctaves }
     }),
     []
   )
 
+  // Update uniforms when props change
   useEffect(() => {
-    // Check initial theme
+    uniforms.uCloudDensity.value = cloudDensity
+    uniforms.uCloudCoverage.value = cloudCoverage
+    uniforms.uCloudSpeed.value = cloudSpeed
+    uniforms.uNoiseOctaves.value = noiseOctaves
+  }, [cloudDensity, cloudCoverage, cloudSpeed, noiseOctaves, uniforms])
+
+  useEffect(() => {
     const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)')
     uniforms.uTheme.value = darkModeQuery.matches ? 1 : 0
 
-    // Listen for changes
     const handler = (e: MediaQueryListEvent) => {
       uniforms.uTheme.value = e.matches ? 1 : 0
     }
@@ -158,7 +210,6 @@ export default function PerlinBackground() {
 
   useFrame((state) => {
     if (mesh.current) {
-      // Update time
       uniforms.uTime.value = state.clock.getElapsedTime()
     }
   })

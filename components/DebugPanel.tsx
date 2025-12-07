@@ -14,9 +14,20 @@ interface DebugPanelProps {
     debug: boolean
     setDebug: (v: boolean) => void
   }
+  skySettings?: {
+    cloudDensity: number
+    setCloudDensity: (v: number) => void
+    cloudCoverage: number
+    setCloudCoverage: (v: number) => void
+    cloudSpeed: number
+    setCloudSpeed: (v: number) => void
+    noiseOctaves: number
+    setNoiseOctaves: (v: number) => void
+    setPreset: (preset: 'clear' | 'sunny' | 'cloudy') => void
+  }
 }
 
-export default function DebugPanel({ terrainSettings }: DebugPanelProps) {
+export default function DebugPanel({ terrainSettings, skySettings }: DebugPanelProps) {
   const { 
     yaw, 
     pitch, 
@@ -89,6 +100,85 @@ export default function DebugPanel({ terrainSettings }: DebugPanelProps) {
               </div>
             )}
           </div>
+
+          {skySettings && (
+            <>
+              <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2 pt-2">
+                <span className="font-bold text-sky-400">Sky Settings</span>
+                <div className="flex space-x-1">
+                  <button onClick={() => skySettings.setPreset('clear')} className="px-1.5 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-[10px]">Clear</button>
+                  <button onClick={() => skySettings.setPreset('sunny')} className="px-1.5 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-[10px]">Sunny</button>
+                  <button onClick={() => skySettings.setPreset('cloudy')} className="px-1.5 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-[10px]">Cloudy</button>
+                </div>
+              </div>
+              
+              <div className="space-y-3 mb-4">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Coverage:</span>
+                    <span>{skySettings.cloudCoverage.toFixed(2)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.05"
+                    value={skySettings.cloudCoverage}
+                    onChange={(e) => skySettings.setCloudCoverage(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Density:</span>
+                    <span>{skySettings.cloudDensity.toFixed(2)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.05"
+                    value={skySettings.cloudDensity}
+                    onChange={(e) => skySettings.setCloudDensity(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Speed:</span>
+                    <span>{skySettings.cloudSpeed.toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="2" 
+                    step="0.1"
+                    value={skySettings.cloudSpeed}
+                    onChange={(e) => skySettings.setCloudSpeed(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Octaves:</span>
+                    <span>{skySettings.noiseOctaves}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="6" 
+                    step="1"
+                    value={skySettings.noiseOctaves}
+                    onChange={(e) => skySettings.setNoiseOctaves(parseInt(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           {terrainSettings && (
             <>
