@@ -256,24 +256,23 @@ export function lerp(start: number, end: number, factor: number): number {
 export class AutoBlink {
   private leftBlinkState: number = 0;
   private rightBlinkState: number = 0;
-  private leftTimer: number = 0;
-  private rightTimer: number = 0;
-  private leftNextBlinkTime: number;
-  private rightNextBlinkTime: number;
-  private isLeftBlinking: boolean = false;
-  private isRightBlinking: boolean = false;
-  private leftBlinkStartTime: number = 0;
-  private rightBlinkStartTime: number = 0;
+  private timer: number = 0;
+  private nextBlinkTime: number;
+  
+  // Blink execution state
+  private isBlinking: boolean = false;
+  private blinkStartTime: number = 0;
+  private leftDelay: number = 0;
+  private rightDelay: number = 0;
   
   // Configuration
   private readonly BLINK_DURATION = 0.15; // seconds (150ms)
   private readonly MIN_INTERVAL = 3.0; // seconds
   private readonly MAX_INTERVAL = 5.0; // seconds
-  private readonly LEFT_RIGHT_DELAY_MAX = 0.05; // seconds (50ms max difference)
+  private readonly LEFT_RIGHT_DELAY_MAX = 0.02; // Reduced to 20ms for tighter sync
   
   constructor() {
-    this.leftNextBlinkTime = this.getRandomBlinkInterval();
-    this.rightNextBlinkTime = this.leftNextBlinkTime + this.getRandomDelay();
+    this.nextBlinkTime = this.getRandomBlinkInterval();
   }
   
   /**
@@ -281,13 +280,6 @@ export class AutoBlink {
    */
   private getRandomBlinkInterval(): number {
     return this.MIN_INTERVAL + Math.random() * (this.MAX_INTERVAL - this.MIN_INTERVAL);
-  }
-  
-  /**
-   * Get small random delay for left-right timing difference
-   */
-  private getRandomDelay(): number {
-    return (Math.random() - 0.5) * this.LEFT_RIGHT_DELAY_MAX;
   }
   
   /**
@@ -303,6 +295,8 @@ export class AutoBlink {
    * Calculate blink value at given time in blink cycle
    */
   private calculateBlinkValue(elapsedTime: number): number {
+    if (elapsedTime < 0) return 0;
+    
     const progress = Math.min(elapsedTime / this.BLINK_DURATION, 1.0);
     
     // Blink goes: 0 -> 1 -> 0 (close -> open)
@@ -322,44 +316,56 @@ export class AutoBlink {
    * @param delta Time elapsed since last frame in seconds
    */
   public update(delta: number): void {
-    // Update left eye
-    this.leftTimer += delta;
+    this.timer += delta;
     
-    if (this.isLeftBlinking) {
-      const elapsed = this.leftTimer - this.leftBlinkStartTime;
-      if (elapsed >= this.BLINK_DURATION) {
-        // Blink finished
-        this.isLeftBlinking = false;
+    if (!this.isBlinking) {
+      if (this.timer >= this.nextBlinkTime) {
+        // Start blinking sequence
+        this.isBlinking = true;
+        this.blinkStartTime = this.timer;
+        
+        // Determine slight offset for each eye
+        const delay = (Math.random() - 0.5) * this.LEFT_RIGHT_DELAY_MAX;
+        if (delay > 0) {
+            this.leftDelay = 0;
+            this.rightDelay = delay;
+        } else {
+            this.leftDelay = -delay;
+            this.rightDelay = 0;
+        }
+      }
+    } else {
+      // Currently blinking
+      const timeSinceStart = this.timer - this.blinkStartTime;
+      
+      // Calculate for left eye
+      const leftElapsed = timeSinceStart - this.leftDelay;
+      if (leftElapsed >= 0 && leftElapsed < this.BLINK_DURATION) {
+        this.leftBlinkState = this.calculateBlinkValue(leftElapsed);
+      } else if (leftElapsed >= this.BLINK_DURATION) {
         this.leftBlinkState = 0;
-        this.leftNextBlinkTime = this.leftTimer + this.getRandomBlinkInterval();
       } else {
-        // Update blink value
-        this.leftBlinkState = this.calculateBlinkValue(elapsed);
+        this.leftBlinkState = 0;
       }
-    } else if (this.leftTimer >= this.leftNextBlinkTime) {
-      // Start new blink
-      this.isLeftBlinking = true;
-      this.leftBlinkStartTime = this.leftTimer;
-    }
-    
-    // Update right eye
-    this.rightTimer += delta;
-    
-    if (this.isRightBlinking) {
-      const elapsed = this.rightTimer - this.rightBlinkStartTime;
-      if (elapsed >= this.BLINK_DURATION) {
-        // Blink finished
-        this.isRightBlinking = false;
+      
+      // Calculate for right eye
+      const rightElapsed = timeSinceStart - this.rightDelay;
+      if (rightElapsed >= 0 && rightElapsed < this.BLINK_DURATION) {
+        this.rightBlinkState = this.calculateBlinkValue(rightElapsed);
+      } else if (rightElapsed >= this.BLINK_DURATION) {
         this.rightBlinkState = 0;
-        this.rightNextBlinkTime = this.rightTimer + this.getRandomBlinkInterval();
       } else {
-        // Update blink value
-        this.rightBlinkState = this.calculateBlinkValue(elapsed);
+        this.rightBlinkState = 0;
       }
-    } else if (this.rightTimer >= this.rightNextBlinkTime) {
-      // Start new blink
-      this.isRightBlinking = true;
-      this.rightBlinkStartTime = this.rightTimer;
+      
+      // Check if both finished
+      const maxDelay = Math.max(this.leftDelay, this.rightDelay);
+      if (timeSinceStart >= this.BLINK_DURATION + maxDelay) {
+        this.isBlinking = false;
+        this.leftBlinkState = 0;
+        this.rightBlinkState = 0;
+        this.nextBlinkTime = this.timer + this.getRandomBlinkInterval();
+      }
     }
   }
   
@@ -379,11 +385,8 @@ export class AutoBlink {
   public reset(): void {
     this.leftBlinkState = 0;
     this.rightBlinkState = 0;
-    this.leftTimer = 0;
-    this.rightTimer = 0;
-    this.leftNextBlinkTime = this.getRandomBlinkInterval();
-    this.rightNextBlinkTime = this.leftNextBlinkTime + this.getRandomDelay();
-    this.isLeftBlinking = false;
-    this.isRightBlinking = false;
+    this.timer = 0;
+    this.nextBlinkTime = this.getRandomBlinkInterval();
+    this.isBlinking = false;
   }
 }
