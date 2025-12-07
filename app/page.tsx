@@ -17,6 +17,7 @@ import PerlinBackground from '@/components/PerlinBackground'
 import PerlinTerrain from '@/components/PerlinTerrain'
 import PerlinOcean, { WaveParams } from '@/components/PerlinOcean'
 import PerlinCelestialBody from '@/components/PerlinCelestialBody'
+import PerlinTree from '@/components/PerlinTree'
 import PerformanceMonitor from '@/components/PerformanceMonitor'
 import * as THREE from 'three'
 
@@ -61,6 +62,15 @@ export default function Home() {
   const [terrainHeightMap, setTerrainHeightMap] = useState<THREE.DataTexture | null>(null)
   const [terrainSize, setTerrainSize] = useState(30)
   const [oceanDebug, setOceanDebug] = useState(false)
+
+  // Tree Settings
+  const [treeDensity, setTreeDensity] = useState(0.3)
+  const [treeSizeRange, setTreeSizeRange] = useState<[number, number]>([0.8, 1.5])
+  const [treeVarieties, setTreeVarieties] = useState<string[]>(['conifer', 'deciduous', 'bush'])
+  const [treeSeed, setTreeSeed] = useState(42)
+  const [treeWindStrength, setTreeWindStrength] = useState(0.5)
+  const [treeLoadingProgress, setTreeLoadingProgress] = useState(0)
+  const [treeDebug, setTreeDebug] = useState(false)
 
   const setSkyPreset = (preset: 'clear' | 'sunny' | 'cloudy') => {
     switch (preset) {
@@ -153,6 +163,18 @@ export default function Home() {
                     setTerrainSize(size)
                   }}
                 />
+                <PerlinTree 
+                  terrainHeightMap={terrainHeightMap}
+                  terrainSize={terrainSize}
+                  terrainPosition={[0, -2, 0]}
+                  density={treeDensity}
+                  sizeRange={treeSizeRange}
+                  varieties={treeVarieties}
+                  seed={treeSeed}
+                  windStrength={treeWindStrength}
+                  debug={treeDebug}
+                  onProgress={setTreeLoadingProgress}
+                />
                 <PerlinOcean 
                   waves={oceanWaves}
                   terrainHeightMap={terrainHeightMap}
@@ -213,6 +235,21 @@ export default function Home() {
                 setPreset: setOceanPreset,
                 debug: oceanDebug,
                 setDebug: setOceanDebug
+              }}
+              treeSettings={{
+                density: treeDensity,
+                setDensity: setTreeDensity,
+                sizeRange: treeSizeRange,
+                setSizeRange: setTreeSizeRange,
+                varieties: treeVarieties,
+                setVarieties: setTreeVarieties,
+                seed: treeSeed,
+                setSeed: setTreeSeed,
+                windStrength: treeWindStrength,
+                setWindStrength: setTreeWindStrength,
+                debug: treeDebug,
+                setDebug: setTreeDebug,
+                loadingProgress: treeLoadingProgress
               }}
             />
             <TranscriptionDisplay />

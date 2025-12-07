@@ -47,9 +47,24 @@ interface DebugPanelProps {
     debug: boolean
     setDebug: (v: boolean) => void
   }
+  treeSettings?: {
+    density: number
+    setDensity: (v: number) => void
+    sizeRange: [number, number]
+    setSizeRange: (v: [number, number]) => void
+    varieties: string[]
+    setVarieties: (v: string[]) => void
+    seed: number
+    setSeed: (v: number) => void
+    windStrength: number
+    setWindStrength: (v: number) => void
+    debug: boolean
+    setDebug: (v: boolean) => void
+    loadingProgress: number
+  }
 }
 
-export default function DebugPanel({ terrainSettings, skySettings, celestialSettings, oceanSettings }: DebugPanelProps) {
+export default function DebugPanel({ terrainSettings, skySettings, celestialSettings, oceanSettings, treeSettings }: DebugPanelProps) {
   const { 
     yaw, 
     pitch, 
@@ -471,6 +486,89 @@ export default function DebugPanel({ terrainSettings, skySettings, celestialSett
                         </div>
                       )}
                     </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {treeSettings && (
+            <>
+              <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2 pt-2">
+                <span className="font-bold text-emerald-400">Tree Settings</span>
+                <div className="flex items-center space-x-2">
+                  {treeSettings.loadingProgress < 100 && (
+                    <span className="text-[10px] text-yellow-400">{Math.round(treeSettings.loadingProgress)}%</span>
+                  )}
+                  <label className="flex items-center space-x-1 cursor-pointer">
+                    <span className="text-gray-400 text-[10px]">Debug</span>
+                    <input 
+                      type="checkbox" 
+                      checked={treeSettings.debug} 
+                      onChange={(e) => treeSettings.setDebug(e.target.checked)}
+                      className="form-checkbox h-3 w-3 text-emerald-500 rounded focus:ring-0 bg-gray-700 border-gray-600"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-4">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Density:</span>
+                    <span>{treeSettings.density.toFixed(2)}</span>
+                  </div>
+                  <input 
+                    type="range" min="0" max="1" step="0.05"
+                    value={treeSettings.density}
+                    onChange={(e) => treeSettings.setDensity(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Wind:</span>
+                    <span>{treeSettings.windStrength.toFixed(2)}</span>
+                  </div>
+                  <input 
+                    type="range" min="0" max="2" step="0.1"
+                    value={treeSettings.windStrength}
+                    onChange={(e) => treeSettings.setWindStrength(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Seed:</span>
+                    <span>{treeSettings.seed}</span>
+                  </div>
+                  <input 
+                    type="number"
+                    value={treeSettings.seed}
+                    onChange={(e) => treeSettings.setSeed(parseInt(e.target.value))}
+                    className="w-full bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-600"
+                  />
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  {['conifer', 'deciduous', 'bush', 'willow', 'palm'].map(type => (
+                    <label key={type} className="flex items-center space-x-1 cursor-pointer">
+                      <input 
+                        type="checkbox"
+                        checked={treeSettings.varieties.includes(type)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            treeSettings.setVarieties([...treeSettings.varieties, type])
+                          } else {
+                            treeSettings.setVarieties(treeSettings.varieties.filter(v => v !== type))
+                          }
+                        }}
+                        className="form-checkbox h-3 w-3 text-emerald-500 rounded focus:ring-0 bg-gray-700 border-gray-600"
+                      />
+                      <span className="text-[10px] text-gray-300 capitalize">{type}</span>
+                    </label>
                   ))}
                 </div>
               </div>
