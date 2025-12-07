@@ -19,6 +19,9 @@ interface FaceTrackingState {
   cursorY: number;
   isClicking: boolean;
   isHandDetected: boolean;
+  // Blink state
+  blinkLeft: number;
+  blinkRight: number;
 }
 
 interface FaceTrackingContextType extends FaceTrackingState {
@@ -33,6 +36,7 @@ interface FaceTrackingContextType extends FaceTrackingState {
   setCursorPosition: (x: number, y: number) => void;
   setIsClicking: (clicking: boolean) => void;
   setIsHandDetected: (detected: boolean) => void;
+  setBlinkValues: (left: number, right: number) => void;
 }
 
 const FaceTrackingContext = createContext<FaceTrackingContextType | undefined>(undefined);
@@ -55,6 +59,10 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
   const [isClicking, setIsClicking] = useState(false);
   const [isHandDetected, setIsHandDetected] = useState(false);
   
+  // Blink state
+  const [blinkLeft, setBlinkLeft] = useState(0);
+  const [blinkRight, setBlinkRight] = useState(0);
+  
   // Initialize debug state from localStorage if available
   const [showDebug, setShowDebugState] = useState(false);
 
@@ -73,6 +81,11 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
   const setCursorPosition = (newX: number, newY: number) => {
     setCursorX(newX);
     setCursorY(newY);
+  };
+
+  const setBlinkValues = (left: number, right: number) => {
+    setBlinkLeft(left);
+    setBlinkRight(right);
   };
 
   const setShowDebug = (show: boolean) => {
@@ -108,6 +121,8 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         cursorY,
         isClicking,
         isHandDetected,
+        blinkLeft,
+        blinkRight,
         setRotation,
         setPosition,
         setIsDetecting,
@@ -118,6 +133,7 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         setCursorPosition,
         setIsClicking,
         setIsHandDetected,
+        setBlinkValues,
       }}
     >
       {children}

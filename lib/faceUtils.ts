@@ -249,3 +249,141 @@ export function getCameraPosition(
 export function lerp(start: number, end: number, factor: number): number {
   return start + (end - start) * factor;
 }
+
+/**
+ * Automatic blinking system with natural randomness
+ */
+export class AutoBlink {
+  private leftBlinkState: number = 0;
+  private rightBlinkState: number = 0;
+  private leftTimer: number = 0;
+  private rightTimer: number = 0;
+  private leftNextBlinkTime: number;
+  private rightNextBlinkTime: number;
+  private isLeftBlinking: boolean = false;
+  private isRightBlinking: boolean = false;
+  private leftBlinkStartTime: number = 0;
+  private rightBlinkStartTime: number = 0;
+  
+  // Configuration
+  private readonly BLINK_DURATION = 0.15; // seconds (150ms)
+  private readonly MIN_INTERVAL = 3.0; // seconds
+  private readonly MAX_INTERVAL = 5.0; // seconds
+  private readonly LEFT_RIGHT_DELAY_MAX = 0.05; // seconds (50ms max difference)
+  
+  constructor() {
+    this.leftNextBlinkTime = this.getRandomBlinkInterval();
+    this.rightNextBlinkTime = this.leftNextBlinkTime + this.getRandomDelay();
+  }
+  
+  /**
+   * Get random interval between blinks
+   */
+  private getRandomBlinkInterval(): number {
+    return this.MIN_INTERVAL + Math.random() * (this.MAX_INTERVAL - this.MIN_INTERVAL);
+  }
+  
+  /**
+   * Get small random delay for left-right timing difference
+   */
+  private getRandomDelay(): number {
+    return (Math.random() - 0.5) * this.LEFT_RIGHT_DELAY_MAX;
+  }
+  
+  /**
+   * Easing function for natural blink motion (ease-in-out)
+   */
+  private easeInOutCubic(t: number): number {
+    return t < 0.5
+      ? 4 * t * t * t
+      : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+  
+  /**
+   * Calculate blink value at given time in blink cycle
+   */
+  private calculateBlinkValue(elapsedTime: number): number {
+    const progress = Math.min(elapsedTime / this.BLINK_DURATION, 1.0);
+    
+    // Blink goes: 0 -> 1 -> 0 (close -> open)
+    const easedProgress = this.easeInOutCubic(progress);
+    
+    if (progress < 0.5) {
+      // Closing phase (0 -> 1)
+      return easedProgress * 2;
+    } else {
+      // Opening phase (1 -> 0)
+      return 1 - (easedProgress - 0.5) * 2;
+    }
+  }
+  
+  /**
+   * Update blink state (call every frame)
+   * @param delta Time elapsed since last frame in seconds
+   */
+  public update(delta: number): void {
+    // Update left eye
+    this.leftTimer += delta;
+    
+    if (this.isLeftBlinking) {
+      const elapsed = this.leftTimer - this.leftBlinkStartTime;
+      if (elapsed >= this.BLINK_DURATION) {
+        // Blink finished
+        this.isLeftBlinking = false;
+        this.leftBlinkState = 0;
+        this.leftNextBlinkTime = this.leftTimer + this.getRandomBlinkInterval();
+      } else {
+        // Update blink value
+        this.leftBlinkState = this.calculateBlinkValue(elapsed);
+      }
+    } else if (this.leftTimer >= this.leftNextBlinkTime) {
+      // Start new blink
+      this.isLeftBlinking = true;
+      this.leftBlinkStartTime = this.leftTimer;
+    }
+    
+    // Update right eye
+    this.rightTimer += delta;
+    
+    if (this.isRightBlinking) {
+      const elapsed = this.rightTimer - this.rightBlinkStartTime;
+      if (elapsed >= this.BLINK_DURATION) {
+        // Blink finished
+        this.isRightBlinking = false;
+        this.rightBlinkState = 0;
+        this.rightNextBlinkTime = this.rightTimer + this.getRandomBlinkInterval();
+      } else {
+        // Update blink value
+        this.rightBlinkState = this.calculateBlinkValue(elapsed);
+      }
+    } else if (this.rightTimer >= this.rightNextBlinkTime) {
+      // Start new blink
+      this.isRightBlinking = true;
+      this.rightBlinkStartTime = this.rightTimer;
+    }
+  }
+  
+  /**
+   * Get current blink values for both eyes
+   */
+  public getBlinkValues(): { left: number; right: number } {
+    return {
+      left: this.leftBlinkState,
+      right: this.rightBlinkState
+    };
+  }
+  
+  /**
+   * Reset timers (useful when starting/stopping)
+   */
+  public reset(): void {
+    this.leftBlinkState = 0;
+    this.rightBlinkState = 0;
+    this.leftTimer = 0;
+    this.rightTimer = 0;
+    this.leftNextBlinkTime = this.getRandomBlinkInterval();
+    this.rightNextBlinkTime = this.leftNextBlinkTime + this.getRandomDelay();
+    this.isLeftBlinking = false;
+    this.isRightBlinking = false;
+  }
+}

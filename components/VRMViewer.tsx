@@ -7,7 +7,7 @@ import { VRMLoaderPlugin, VRMUtils, VRM } from '@pixiv/three-vrm'
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation'
 import { useFaceTracking } from '@/contexts/FaceTrackingContext'
 import { useAnimation, ANIMATION_REGISTRY } from '@/contexts/AnimationContext'
-import { getCameraPosition, lerp } from '@/lib/faceUtils'
+import { getCameraPosition, lerp, AutoBlink } from '@/lib/faceUtils'
 import * as THREE from 'three'
 
 export default function VRMViewer() {
@@ -32,6 +32,7 @@ export default function VRMViewer() {
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
   const currentActionRef = useRef<THREE.AnimationAction | null>(null)
   const loaderRef = useRef<GLTFLoader>(new GLTFLoader())
+  const autoBlinkRef = useRef<AutoBlink>(new AutoBlink())
 
   useEffect(() => {
     loaderRef.current.register((parser) => {
@@ -121,6 +122,23 @@ export default function VRMViewer() {
     // Update VRM
     if (vrm) {
       vrm.update(delta)
+      
+      // Update auto blink
+      autoBlinkRef.current.update(delta)
+      const blinkValues = autoBlinkRef.current.getBlinkValues()
+      
+      // Apply blink to VRM expressions
+      if (vrm.expressionManager) {
+        vrm.expressionManager.setValue('blinkLeft', blinkValues.left)
+        vrm.expressionManager.setValue('blinkRight', blinkValues.right)
+      } else if ((vrm as any).expressions) {
+        // Fallback for different VRM versions
+        const expressions = (vrm as any).expressions
+        if (expressions.setValue) {
+          expressions.setValue('blinkLeft', blinkValues.left)
+          expressions.setValue('blinkRight', blinkValues.right)
+        }
+      }
     }
 
     // Smoothly interpolate current rotation towards target rotation
