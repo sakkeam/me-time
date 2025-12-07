@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { AudioRecorder, AudioPlayer } from '@/lib/audioUtils';
 import { useAnimation, ANIMATION_REGISTRY } from '@/contexts/AnimationContext';
+import { useFaceTracking } from '@/contexts/FaceTrackingContext';
 
 interface RealtimeContextType {
   isConnected: boolean;
@@ -62,6 +63,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const currentResponseIdRef = useRef<string | null>(null);
 
   const { playAnimation } = useAnimation();
+  const { setExpression } = useFaceTracking();
 
   // Initialize audio player
   useEffect(() => {
@@ -189,6 +191,42 @@ ${animationDescriptions}`,
                   },
                   required: ["animation", "reason"]
                 }
+              },
+              {
+                type: "function",
+                name: "set_expression",
+                description: `Set a facial expression on the avatar with specified intensity and duration. Choose expressions that match the emotional tone of the conversation. The expression will automatically return to neutral after the duration expires.
+
+Available expressions:
+- neutral: Default calm expression
+- happy: Smile, joy, excitement
+- sad: Sadness, disappointment
+- angry: Anger, frustration, annoyance
+- relaxed: Calm, content, peaceful
+- surprised: Shock, amazement, curiosity`,
+                parameters: {
+                  type: "object",
+                  properties: {
+                    expression: {
+                      type: "string",
+                      enum: ["neutral", "happy", "sad", "angry", "relaxed", "surprised"],
+                      description: "The facial expression to display"
+                    },
+                    intensity: {
+                      type: "number",
+                      minimum: 0.0,
+                      maximum: 1.0,
+                      description: "Expression strength from 0.0 (subtle) to 1.0 (strong). Default 0.7"
+                    },
+                    duration_seconds: {
+                      type: "number",
+                      minimum: 0.5,
+                      maximum: 30.0,
+                      description: "How long to hold the expression before returning to neutral. Default 3.0 seconds"
+                    }
+                  },
+                  required: ["expression"]
+                }
               }
             ],
             tool_choice: "auto"
@@ -291,6 +329,33 @@ ${animationDescriptions}`,
                 ws.send(JSON.stringify({
                   type: 'response.create'
                 }));
+              } else if (message.name === 'set_expression') {
+                console.log(`Realtime API triggered expression: ${args.expression} (intensity: ${args.intensity ?? 0.7}, duration: ${args.duration_seconds ?? 3.0}s)`);
+                setExpression(
+                  args.expression,
+                  args.intensity ?? 0.7,
+                  args.duration_seconds ?? 3.0
+                );
+                
+                // Send function output back to server
+                ws.send(JSON.stringify({
+                  type: 'conversation.item.create',
+                  item: {
+                    type: 'function_call_output',
+                    call_id: message.call_id,
+                    output: JSON.stringify({ 
+                      success: true, 
+                      expression: args.expression,
+                      intensity: args.intensity ?? 0.7,
+                      duration: args.duration_seconds ?? 3.0
+                    })
+                  }
+                }));
+                
+                // Trigger another response
+                ws.send(JSON.stringify({
+                  type: 'response.create'
+                }));
               }
             } catch (e) {
               console.error('Failed to parse function arguments:', e);
@@ -327,7 +392,7 @@ ${animationDescriptions}`,
       console.error('Failed to connect:', err);
       setError(err instanceof Error ? err.message : 'Failed to connect');
     }
-  }, [selectedVoice, playAnimation]);
+  }, [selectedVoice, playAnimation, setExpression]);
 
   const startSession = async () => {
     setError(null);

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { VRMExpression } from '@/lib/faceUtils';
 
 interface FaceTrackingState {
   yaw: number;
@@ -22,6 +23,10 @@ interface FaceTrackingState {
   // Blink state
   blinkLeft: number;
   blinkRight: number;
+  // Expression state
+  currentExpression: VRMExpression;
+  expressionIntensity: number;
+  expressionDuration: number;
 }
 
 interface FaceTrackingContextType extends FaceTrackingState {
@@ -37,6 +42,9 @@ interface FaceTrackingContextType extends FaceTrackingState {
   setIsClicking: (clicking: boolean) => void;
   setIsHandDetected: (detected: boolean) => void;
   setBlinkValues: (left: number, right: number) => void;
+  // Expression control
+  setExpression: (expression: VRMExpression, intensity: number, duration: number) => void;
+  resetExpression: () => void;
 }
 
 const FaceTrackingContext = createContext<FaceTrackingContextType | undefined>(undefined);
@@ -63,6 +71,11 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
   const [blinkLeft, setBlinkLeft] = useState(0);
   const [blinkRight, setBlinkRight] = useState(0);
   
+  // Expression state
+  const [currentExpression, setCurrentExpressionState] = useState<VRMExpression>('neutral');
+  const [expressionIntensity, setExpressionIntensity] = useState(0);
+  const [expressionDuration, setExpressionDuration] = useState(0);
+  
   // Initialize debug state from localStorage if available
   const [showDebug, setShowDebugState] = useState(false);
 
@@ -86,6 +99,18 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
   const setBlinkValues = (left: number, right: number) => {
     setBlinkLeft(left);
     setBlinkRight(right);
+  };
+
+  const setExpression = (expression: VRMExpression, intensity: number, duration: number) => {
+    setCurrentExpressionState(expression);
+    setExpressionIntensity(intensity);
+    setExpressionDuration(duration);
+  };
+  
+  const resetExpression = () => {
+    setCurrentExpressionState('neutral');
+    setExpressionIntensity(0);
+    setExpressionDuration(0);
   };
 
   const setShowDebug = (show: boolean) => {
@@ -123,6 +148,9 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         isHandDetected,
         blinkLeft,
         blinkRight,
+        currentExpression,
+        expressionIntensity,
+        expressionDuration,
         setRotation,
         setPosition,
         setIsDetecting,
@@ -134,6 +162,8 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         setIsClicking,
         setIsHandDetected,
         setBlinkValues,
+        setExpression,
+        resetExpression,
       }}
     >
       {children}

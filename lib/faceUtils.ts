@@ -390,3 +390,152 @@ export class AutoBlink {
     this.isBlinking = false;
   }
 }
+
+/**
+ * VRM Expression presets
+ */
+export type VRMExpression = 'neutral' | 'happy' | 'sad' | 'angry' | 'relaxed' | 'surprised';
+
+export interface ExpressionState {
+  expression: VRMExpression;
+  intensity: number;
+  duration: number;
+}
+
+/**
+ * Manages VRM facial expressions with smooth transitions and auto-reset
+ */
+export class ExpressionManager {
+  private currentExpression: VRMExpression = 'neutral';
+  private targetExpression: VRMExpression = 'neutral';
+  private currentIntensity: number = 0;
+  private targetIntensity: number = 0;
+  private transitionProgress: number = 1.0; // 1.0 = completed
+  private timer: number = 0;
+  private duration: number = 0;
+  private isActive: boolean = false;
+  
+  // Smooth transition speed
+  private readonly TRANSITION_SPEED = 3.0; // How fast to transition (higher = faster)
+  
+  // Expression blend values for each VRM expression
+  private expressionValues: Record<VRMExpression, number> = {
+    neutral: 1.0,
+    happy: 0,
+    sad: 0,
+    angry: 0,
+    relaxed: 0,
+    surprised: 0
+  };
+  
+  /**
+   * Set a new expression with intensity and duration
+   * @param expression Target expression
+   * @param intensity Expression strength (0.0 to 1.0)
+   * @param duration How long to hold the expression before returning to neutral (seconds)
+   */
+  public setExpression(expression: VRMExpression, intensity: number = 1.0, duration: number = 3.0): void {
+    this.targetExpression = expression;
+    this.targetIntensity = Math.max(0, Math.min(1, intensity)); // Clamp 0-1
+    this.duration = duration;
+    this.timer = 0;
+    this.transitionProgress = 0;
+    this.isActive = true;
+  }
+  
+  /**
+   * Immediately reset to neutral
+   */
+  public reset(): void {
+    this.setExpression('neutral', 0, 0);
+  }
+  
+  /**
+   * Update expression state (call every frame)
+   * @param delta Time elapsed since last frame in seconds
+   * @param isEmotionAnimationPlaying Whether an emotion-category animation is currently playing
+   */
+  public update(delta: number, isEmotionAnimationPlaying: boolean = false): void {
+    if (!this.isActive) return;
+    
+    // Update transition progress
+    if (this.transitionProgress < 1.0) {
+      this.transitionProgress = Math.min(1.0, this.transitionProgress + delta * this.TRANSITION_SPEED);
+      
+      // Smooth interpolation using ease-out cubic
+      const easedProgress = 1 - Math.pow(1 - this.transitionProgress, 3);
+      
+      // Interpolate expression change
+      if (this.currentExpression !== this.targetExpression) {
+        // Cross-fade: reduce current, increase target
+        if (easedProgress > 0.5) {
+          this.currentExpression = this.targetExpression;
+        }
+      }
+      
+      // Interpolate intensity
+      this.currentIntensity = lerp(this.currentIntensity, this.targetIntensity, easedProgress);
+    } else {
+      // Transition complete, hold the expression
+      this.currentIntensity = this.targetIntensity;
+      this.currentExpression = this.targetExpression;
+      
+      // Update timer for auto-reset
+      if (this.currentExpression !== 'neutral' && this.duration > 0) {
+        this.timer += delta;
+        
+        if (this.timer >= this.duration) {
+          // Auto-reset to neutral
+          this.setExpression('neutral', 0, 0);
+        }
+      }
+    }
+    
+    // Calculate expression blend values
+    this.calculateExpressionValues(isEmotionAnimationPlaying);
+  }
+  
+  /**
+   * Calculate blend values for all expressions
+   * @param isEmotionAnimationPlaying Reduce expression intensity if emotion animation is playing
+   */
+  private calculateExpressionValues(isEmotionAnimationPlaying: boolean): void {
+    // Reset all to 0
+    for (const key in this.expressionValues) {
+      this.expressionValues[key as VRMExpression] = 0;
+    }
+    
+    // Apply current expression with intensity
+    let effectiveIntensity = this.currentIntensity;
+    
+    // Reduce expression intensity when emotion animations are playing
+    if (isEmotionAnimationPlaying) {
+      effectiveIntensity *= 0.3; // Reduce to 30%
+    }
+    
+    if (this.currentExpression === 'neutral') {
+      this.expressionValues.neutral = 1.0 - effectiveIntensity;
+    } else {
+      this.expressionValues[this.currentExpression] = effectiveIntensity;
+      this.expressionValues.neutral = 1.0 - effectiveIntensity;
+    }
+  }
+  
+  /**
+   * Get current expression values to apply to VRM
+   */
+  public getExpressionValues(): Record<VRMExpression, number> {
+    return { ...this.expressionValues };
+  }
+  
+  /**
+   * Get current active expression and intensity (for debugging/UI)
+   */
+  public getCurrentState(): { expression: VRMExpression; intensity: number; timeRemaining: number } {
+    return {
+      expression: this.currentExpression,
+      intensity: this.currentIntensity,
+      timeRemaining: Math.max(0, this.duration - this.timer)
+    };
+  }
+}

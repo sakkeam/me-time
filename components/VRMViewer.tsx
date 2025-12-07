@@ -7,12 +7,12 @@ import { VRMLoaderPlugin, VRMUtils, VRM } from '@pixiv/three-vrm'
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation'
 import { useFaceTracking } from '@/contexts/FaceTrackingContext'
 import { useAnimation, ANIMATION_REGISTRY } from '@/contexts/AnimationContext'
-import { getCameraPosition, lerp, AutoBlink } from '@/lib/faceUtils'
+import { getCameraPosition, lerp, AutoBlink, ExpressionManager } from '@/lib/faceUtils'
 import * as THREE from 'three'
 
 export default function VRMViewer() {
   const { camera } = useThree()
-  const { yaw, pitch, x, y, z } = useFaceTracking()
+  const { yaw, pitch, x, y, z, currentExpression, expressionIntensity, expressionDuration } = useFaceTracking()
   const { currentAnimation, playAnimation } = useAnimation()
   
   // Store current camera rotation and position for smoothing
@@ -33,6 +33,7 @@ export default function VRMViewer() {
   const currentActionRef = useRef<THREE.AnimationAction | null>(null)
   const loaderRef = useRef<GLTFLoader>(new GLTFLoader())
   const autoBlinkRef = useRef<AutoBlink>(new AutoBlink())
+  const expressionManagerRef = useRef<ExpressionManager>(new ExpressionManager())
 
   useEffect(() => {
     loaderRef.current.register((parser) => {
@@ -113,6 +114,17 @@ export default function VRMViewer() {
     }
   }, [currentAnimation, vrm])
 
+  // Watch for expression changes from context
+  useEffect(() => {
+    if (currentExpression) {
+      expressionManagerRef.current.setExpression(
+        currentExpression,
+        expressionIntensity,
+        expressionDuration
+      )
+    }
+  }, [currentExpression, expressionIntensity, expressionDuration])
+
   useFrame((state, delta) => {
     // Update animation mixer
     if (mixerRef.current) {
@@ -127,16 +139,41 @@ export default function VRMViewer() {
       autoBlinkRef.current.update(delta)
       const blinkValues = autoBlinkRef.current.getBlinkValues()
       
-      // Apply blink to VRM expressions
+      // Check if emotion animation is playing
+      const animDef = ANIMATION_REGISTRY[currentAnimation]
+      const isEmotionAnimation = animDef?.category === 'emotions'
+      
+      // Update expression manager
+      expressionManagerRef.current.update(delta, isEmotionAnimation)
+      const expressionValues = expressionManagerRef.current.getExpressionValues()
+      
+      // Apply blink and expressions to VRM
       if (vrm.expressionManager) {
+        // Apply blink
         vrm.expressionManager.setValue('blinkLeft', blinkValues.left)
         vrm.expressionManager.setValue('blinkRight', blinkValues.right)
+        
+        // Apply expressions
+        vrm.expressionManager.setValue('neutral', expressionValues.neutral)
+        vrm.expressionManager.setValue('happy', expressionValues.happy)
+        vrm.expressionManager.setValue('sad', expressionValues.sad)
+        vrm.expressionManager.setValue('angry', expressionValues.angry)
+        vrm.expressionManager.setValue('relaxed', expressionValues.relaxed)
+        vrm.expressionManager.setValue('surprised', expressionValues.surprised)
       } else if ((vrm as any).expressions) {
         // Fallback for different VRM versions
         const expressions = (vrm as any).expressions
         if (expressions.setValue) {
           expressions.setValue('blinkLeft', blinkValues.left)
           expressions.setValue('blinkRight', blinkValues.right)
+          
+          // Apply expressions (fallback)
+          expressions.setValue('neutral', expressionValues.neutral)
+          expressions.setValue('happy', expressionValues.happy)
+          expressions.setValue('sad', expressionValues.sad)
+          expressions.setValue('angry', expressionValues.angry)
+          expressions.setValue('relaxed', expressionValues.relaxed)
+          expressions.setValue('surprised', expressionValues.surprised)
         }
       }
     }
