@@ -154,11 +154,12 @@ export default function VRMViewer() {
         vrm.expressionManager.setValue('blinkRight', blinkValues.right)
         
         // Apply expressions
+        // Note: Map 'happy' to 'relaxed' to keep eyes open (AliciaSolid's 'happy' closes eyes)
         vrm.expressionManager.setValue('neutral', expressionValues.neutral)
-        vrm.expressionManager.setValue('happy', expressionValues.happy)
+        vrm.expressionManager.setValue('happy', 0)
         vrm.expressionManager.setValue('sad', expressionValues.sad)
         vrm.expressionManager.setValue('angry', expressionValues.angry)
-        vrm.expressionManager.setValue('relaxed', expressionValues.relaxed)
+        vrm.expressionManager.setValue('relaxed', Math.min(1, expressionValues.relaxed + expressionValues.happy))
         vrm.expressionManager.setValue('surprised', expressionValues.surprised)
       } else if ((vrm as any).expressions) {
         // Fallback for different VRM versions
@@ -168,11 +169,12 @@ export default function VRMViewer() {
           expressions.setValue('blinkRight', blinkValues.right)
           
           // Apply expressions (fallback)
+          // Note: Map 'happy' to 'relaxed' to keep eyes open
           expressions.setValue('neutral', expressionValues.neutral)
-          expressions.setValue('happy', expressionValues.happy)
+          expressions.setValue('happy', 0)
           expressions.setValue('sad', expressionValues.sad)
           expressions.setValue('angry', expressionValues.angry)
-          expressions.setValue('relaxed', expressionValues.relaxed)
+          expressions.setValue('relaxed', Math.min(1, expressionValues.relaxed + expressionValues.happy))
           expressions.setValue('surprised', expressionValues.surprised)
         }
       }
