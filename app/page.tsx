@@ -16,6 +16,7 @@ import AnimationDebug from '@/components/AnimationDebug'
 import PerlinBackground from '@/components/PerlinBackground'
 import PerlinTerrain from '@/components/PerlinTerrain'
 import PerlinOcean, { WaveParams } from '@/components/PerlinOcean'
+import PerlinCelestialBody from '@/components/PerlinCelestialBody'
 import PerformanceMonitor from '@/components/PerformanceMonitor'
 import * as THREE from 'three'
 
@@ -41,6 +42,12 @@ export default function Home() {
   const [cloudCoverage, setCloudCoverage] = useState(0.3)
   const [cloudSpeed, setCloudSpeed] = useState(0.5)
   const [noiseOctaves, setNoiseOctaves] = useState(3)
+
+  // Celestial Body Settings
+  const [celestialSize, setCelestialSize] = useState(2)
+  const [celestialPosition, setCelestialPosition] = useState<[number, number, number]>([0, 5, -15])
+  const [sunIntensity, setSunIntensity] = useState(1.5)
+  const [moonIntensity, setMoonIntensity] = useState(0.8)
 
   // Ocean Settings
   const [oceanWaves, setOceanWaves] = useState<WaveParams[]>([
@@ -130,6 +137,12 @@ export default function Home() {
                   cloudSpeed={cloudSpeed}
                   noiseOctaves={noiseOctaves}
                 />
+                <PerlinCelestialBody
+                  size={celestialSize}
+                  position={celestialPosition}
+                  sunIntensity={sunIntensity}
+                  moonIntensity={moonIntensity}
+                />
                 <PerlinTerrain 
                   scale={terrainScale} 
                   amplitude={terrainAmplitude} 
@@ -179,6 +192,16 @@ export default function Home() {
                 noiseOctaves,
                 setNoiseOctaves,
                 setPreset: setSkyPreset
+              }}
+              celestialSettings={{
+                size: celestialSize,
+                setSize: setCelestialSize,
+                position: celestialPosition,
+                setPosition: setCelestialPosition,
+                sunIntensity,
+                setSunIntensity,
+                moonIntensity,
+                setMoonIntensity
               }}
               oceanSettings={{
                 waves: oceanWaves,

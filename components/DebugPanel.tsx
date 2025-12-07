@@ -26,6 +26,16 @@ interface DebugPanelProps {
     setNoiseOctaves: (v: number) => void
     setPreset: (preset: 'clear' | 'sunny' | 'cloudy') => void
   }
+  celestialSettings?: {
+    size: number
+    setSize: (v: number) => void
+    position: [number, number, number]
+    setPosition: (v: [number, number, number]) => void
+    sunIntensity: number
+    setSunIntensity: (v: number) => void
+    moonIntensity: number
+    setMoonIntensity: (v: number) => void
+  }
   oceanSettings?: {
     waves: WaveParams[]
     setWaves: (waves: WaveParams[]) => void
@@ -39,7 +49,7 @@ interface DebugPanelProps {
   }
 }
 
-export default function DebugPanel({ terrainSettings, skySettings, oceanSettings }: DebugPanelProps) {
+export default function DebugPanel({ terrainSettings, skySettings, celestialSettings, oceanSettings }: DebugPanelProps) {
   const { 
     yaw, 
     pitch, 
@@ -204,6 +214,112 @@ export default function DebugPanel({ terrainSettings, skySettings, oceanSettings
                     step="1"
                     value={skySettings.noiseOctaves}
                     onChange={(e) => skySettings.setNoiseOctaves(parseInt(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {celestialSettings && (
+            <>
+              <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2 pt-2">
+                <span className="font-bold text-yellow-400">Sun/Moon Settings</span>
+              </div>
+              
+              <div className="space-y-3 mb-4">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Size:</span>
+                    <span>{celestialSettings.size.toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0.5" 
+                    max="5" 
+                    step="0.1"
+                    value={celestialSettings.size}
+                    onChange={(e) => celestialSettings.setSize(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Position X:</span>
+                    <span>{celestialSettings.position[0].toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="-20" 
+                    max="20" 
+                    step="0.5"
+                    value={celestialSettings.position[0]}
+                    onChange={(e) => celestialSettings.setPosition([parseFloat(e.target.value), celestialSettings.position[1], celestialSettings.position[2]])}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Position Y:</span>
+                    <span>{celestialSettings.position[1].toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="-5" 
+                    max="15" 
+                    step="0.5"
+                    value={celestialSettings.position[1]}
+                    onChange={(e) => celestialSettings.setPosition([celestialSettings.position[0], parseFloat(e.target.value), celestialSettings.position[2]])}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Position Z:</span>
+                    <span>{celestialSettings.position[2].toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="-30" 
+                    max="-5" 
+                    step="0.5"
+                    value={celestialSettings.position[2]}
+                    onChange={(e) => celestialSettings.setPosition([celestialSettings.position[0], celestialSettings.position[1], parseFloat(e.target.value)])}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Sun Intensity:</span>
+                    <span>{celestialSettings.sunIntensity.toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0.5" 
+                    max="3" 
+                    step="0.1"
+                    value={celestialSettings.sunIntensity}
+                    onChange={(e) => celestialSettings.setSunIntensity(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Moon Intensity:</span>
+                    <span>{celestialSettings.moonIntensity.toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0.1" 
+                    max="2" 
+                    step="0.1"
+                    value={celestialSettings.moonIntensity}
+                    onChange={(e) => celestialSettings.setMoonIntensity(parseFloat(e.target.value))}
                     className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                   />
                 </div>
