@@ -2,9 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { AudioRecorder, AudioPlayer } from '@/lib/audioUtils';
-import { useChat } from '@ai-sdk/react';
-import { useAnimation } from '@/contexts/AnimationContext';
-import { Message } from 'ai';
+import { useAnimation, ANIMATION_REGISTRY } from '@/contexts/AnimationContext';
 
 interface RealtimeContextType {
   isConnected: boolean;
@@ -62,51 +60,8 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const audioPlayerRef = useRef<AudioPlayer | null>(null);
   const currentItemIdRef = useRef<string | null>(null);
   const currentResponseIdRef = useRef<string | null>(null);
-  const lastProcessedResponseId = useRef<string | null>(null);
 
   const { playAnimation } = useAnimation();
-
-  // Voltagent integration
-  const chat = useChat({
-    id: 'animation-agent',
-    api: '/api/chat',
-    onToolCall: ({ toolCall }) => {
-      if (toolCall.toolName === 'play_animation') {
-        const args = toolCall.args as any;
-        playAnimation(args.animation);
-      }
-    },
-  });
-  
-  const { append, setMessages } = chat;
-
-  // Trigger agent analysis when a new assistant response is complete
-  useEffect(() => {
-    if (assistantResponses.length > 0) {
-      const lastResponse = assistantResponses[assistantResponses.length - 1];
-      
-      if (lastResponse.id !== lastProcessedResponseId.current) {
-        lastProcessedResponseId.current = lastResponse.id;
-        
-        // Construct history
-        const history: Message[] = [
-          ...transcriptionItems.map(t => ({ id: t.id, role: 'user' as const, content: t.text, createdAt: new Date(t.timestamp) })),
-          ...assistantResponses.map(a => ({ id: a.id, role: 'assistant' as const, content: a.text, createdAt: new Date(a.timestamp) }))
-        ].sort((a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0));
-
-        // Take last 10 messages for context
-        const recentHistory = history.slice(-10);
-        
-        setMessages(recentHistory);
-        
-        if (append) {
-          append({ role: 'user', content: 'Analyze the conversation and play an animation if appropriate.' });
-        } else {
-          console.warn('useChat append function is missing', chat);
-        }
-      }
-    }
-  }, [assistantResponses, transcriptionItems, append, setMessages, chat]);
 
   // Initialize audio player
   useEffect(() => {
@@ -190,7 +145,13 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         console.log('Connected to OpenAI Realtime API');
         setIsConnected(true);
         
-        // Configure session
+        // Prepare tool definition
+        const animationNames = Object.keys(ANIMATION_REGISTRY);
+        const animationDescriptions = Object.values(ANIMATION_REGISTRY)
+          .map(a => `- ${a.name} (${a.category}): ${a.description} [Tags: ${a.tags.join(", ")}]`)
+          .join("\n");
+
+        // Configure session with tools
         ws.send(JSON.stringify({
           type: 'session.update',
           session: {
@@ -205,7 +166,32 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
               threshold: 0.5,
               prefix_padding_ms: 300,
               silence_duration_ms: 500
-            }
+            },
+            tools: [
+              {
+                type: "function",
+                name: "play_animation",
+                description: `Play a VRM animation on the avatar. Choose the most appropriate animation based on the emotion and intent of the conversation.
+Available animations:
+${animationDescriptions}`,
+                parameters: {
+                  type: "object",
+                  properties: {
+                    animation: { 
+                      type: "string", 
+                      enum: animationNames,
+                      description: "The name of the animation to play" 
+                    },
+                    reason: { 
+                      type: "string",
+                      description: "The reason for choosing this animation based on the context"
+                    }
+                  },
+                  required: ["animation", "reason"]
+                }
+              }
+            ],
+            tool_choice: "auto"
           }
         }));
       };
@@ -282,6 +268,34 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           case 'response.audio.done':
             // Handled by AudioPlayer state change
             break;
+
+          case 'response.function_call_arguments.done':
+            // Handle tool call
+            try {
+              const args = JSON.parse(message.arguments);
+              if (message.name === 'play_animation') {
+                console.log(`Realtime API triggered animation: ${args.animation} (${args.reason})`);
+                playAnimation(args.animation);
+                
+                // Send function output back to server
+                ws.send(JSON.stringify({
+                  type: 'conversation.item.create',
+                  item: {
+                    type: 'function_call_output',
+                    call_id: message.call_id,
+                    output: JSON.stringify({ success: true, animation: args.animation })
+                  }
+                }));
+                
+                // Trigger another response if needed (usually the model continues after tool use)
+                ws.send(JSON.stringify({
+                  type: 'response.create'
+                }));
+              }
+            } catch (e) {
+              console.error('Failed to parse function arguments:', e);
+            }
+            break;
             
           case 'error':
             // Ignore specific errors that are expected during normal operation
@@ -313,7 +327,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to connect:', err);
       setError(err instanceof Error ? err.message : 'Failed to connect');
     }
-  }, [selectedVoice]);
+  }, [selectedVoice, playAnimation]);
 
   const startSession = async () => {
     setError(null);
