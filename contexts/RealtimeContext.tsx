@@ -2,6 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { AudioRecorder, AudioPlayer } from '@/lib/audioUtils';
+import { useChat } from '@ai-sdk/react';
+import { useAnimation } from '@/contexts/AnimationContext';
+import { Message } from 'ai';
 
 interface RealtimeContextType {
   isConnected: boolean;
@@ -59,6 +62,43 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const audioPlayerRef = useRef<AudioPlayer | null>(null);
   const currentItemIdRef = useRef<string | null>(null);
   const currentResponseIdRef = useRef<string | null>(null);
+  const lastProcessedResponseId = useRef<string | null>(null);
+
+  const { playAnimation } = useAnimation();
+
+  // Voltagent integration
+  const { append, setMessages } = useChat({
+    api: '/api/chat',
+    onToolCall: ({ toolCall }) => {
+      if (toolCall.toolName === 'play_animation') {
+        const args = toolCall.args as any;
+        playAnimation(args.animation);
+      }
+    },
+  });
+
+  // Trigger agent analysis when a new assistant response is complete
+  useEffect(() => {
+    if (assistantResponses.length > 0) {
+      const lastResponse = assistantResponses[assistantResponses.length - 1];
+      
+      if (lastResponse.id !== lastProcessedResponseId.current) {
+        lastProcessedResponseId.current = lastResponse.id;
+        
+        // Construct history
+        const history: Message[] = [
+          ...transcriptionItems.map(t => ({ id: t.id, role: 'user' as const, content: t.text, createdAt: new Date(t.timestamp) })),
+          ...assistantResponses.map(a => ({ id: a.id, role: 'assistant' as const, content: a.text, createdAt: new Date(a.timestamp) }))
+        ].sort((a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0));
+
+        // Take last 10 messages for context
+        const recentHistory = history.slice(-10);
+        
+        setMessages(recentHistory);
+        append({ role: 'user', content: 'Analyze the conversation and play an animation if appropriate.' });
+      }
+    }
+  }, [assistantResponses, transcriptionItems, append, setMessages]);
 
   // Initialize audio player
   useEffect(() => {
