@@ -15,6 +15,9 @@ import VirtualCursor from '@/components/VirtualCursor'
 import AnimationDebug from '@/components/AnimationDebug'
 import PerlinBackground from '@/components/PerlinBackground'
 import PerlinTerrain from '@/components/PerlinTerrain'
+import PerlinOcean, { WaveParams } from '@/components/PerlinOcean'
+import PerformanceMonitor from '@/components/PerformanceMonitor'
+import * as THREE from 'three'
 
 function Loader() {
   const { progress } = useProgress()
@@ -39,6 +42,19 @@ export default function Home() {
   const [cloudSpeed, setCloudSpeed] = useState(0.5)
   const [noiseOctaves, setNoiseOctaves] = useState(3)
 
+  // Ocean Settings
+  const [oceanWaves, setOceanWaves] = useState<WaveParams[]>([
+    { amplitude: 0.3, wavelength: 8, direction: [1, 0.3], speed: 1.2, steepness: 0.8 },
+    { amplitude: 0.2, wavelength: 5, direction: [0.7, 1], speed: 1.0, steepness: 0.7 },
+    { amplitude: 0.15, wavelength: 3, direction: [-0.5, 0.8], speed: 0.8, steepness: 0.5 },
+    { amplitude: 0.08, wavelength: 1.5, direction: [0.3, -1], speed: 1.5, steepness: 0.3 }
+  ])
+  const [oceanOpacity, setOceanOpacity] = useState(0.85)
+  const [oceanFoamThreshold, setOceanFoamThreshold] = useState(0.7)
+  const [terrainHeightMap, setTerrainHeightMap] = useState<THREE.DataTexture | null>(null)
+  const [terrainSize, setTerrainSize] = useState(30)
+  const [oceanDebug, setOceanDebug] = useState(false)
+
   const setSkyPreset = (preset: 'clear' | 'sunny' | 'cloudy') => {
     switch (preset) {
       case 'clear':
@@ -52,6 +68,45 @@ export default function Home() {
       case 'cloudy':
         setCloudCoverage(0.7)
         setCloudDensity(0.6)
+        break
+    }
+  }
+
+  const setOceanPreset = (preset: 'calm' | 'normal' | 'rough' | 'storm') => {
+    const baseWaves = [
+      { amplitude: 0.3, wavelength: 8, direction: [1, 0.3], speed: 1.2, steepness: 0.8 },
+      { amplitude: 0.2, wavelength: 5, direction: [0.7, 1], speed: 1.0, steepness: 0.7 },
+      { amplitude: 0.15, wavelength: 3, direction: [-0.5, 0.8], speed: 0.8, steepness: 0.5 },
+      { amplitude: 0.08, wavelength: 1.5, direction: [0.3, -1], speed: 1.5, steepness: 0.3 }
+    ] as WaveParams[]
+
+    switch (preset) {
+      case 'calm':
+        setOceanWaves(baseWaves.map(w => ({
+          ...w,
+          amplitude: w.amplitude * 0.3,
+          speed: w.speed * 0.6,
+          steepness: w.steepness * 0.5
+        })))
+        break
+      case 'normal':
+        setOceanWaves(baseWaves)
+        break
+      case 'rough':
+        setOceanWaves(baseWaves.map(w => ({
+          ...w,
+          amplitude: w.amplitude * 1.5,
+          speed: w.speed * 1.3,
+          steepness: Math.min(1.0, w.steepness * 1.2)
+        })))
+        break
+      case 'storm':
+        setOceanWaves(baseWaves.map(w => ({
+          ...w,
+          amplitude: w.amplitude * 2.2,
+          speed: w.speed * 1.8,
+          steepness: Math.min(1.0, w.steepness + 0.2)
+        })))
         break
     }
   }
@@ -79,7 +134,20 @@ export default function Home() {
                   scale={terrainScale} 
                   amplitude={terrainAmplitude} 
                   octaves={terrainOctaves} 
-                  debug={terrainDebug} 
+                  debug={terrainDebug}
+                  onHeightTextureReady={(tex, size) => {
+                    setTerrainHeightMap(tex)
+                    setTerrainSize(size)
+                  }}
+                />
+                <PerlinOcean 
+                  waves={oceanWaves}
+                  terrainHeightMap={terrainHeightMap}
+                  terrainSize={terrainSize}
+                  terrainPosition={[0, -2, 0]}
+                  opacity={oceanOpacity}
+                  foamThreshold={oceanFoamThreshold}
+                  debug={oceanDebug}
                 />
                 <Suspense fallback={<Loader />}>
                   <VRMViewer />
@@ -111,6 +179,17 @@ export default function Home() {
                 noiseOctaves,
                 setNoiseOctaves,
                 setPreset: setSkyPreset
+              }}
+              oceanSettings={{
+                waves: oceanWaves,
+                setWaves: setOceanWaves,
+                opacity: oceanOpacity,
+                setOpacity: setOceanOpacity,
+                foamThreshold: oceanFoamThreshold,
+                setFoamThreshold: setOceanFoamThreshold,
+                setPreset: setOceanPreset,
+                debug: oceanDebug,
+                setDebug: setOceanDebug
               }}
             />
             <TranscriptionDisplay />

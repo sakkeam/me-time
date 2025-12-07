@@ -1,7 +1,8 @@
 'use client'
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useFaceTracking } from '@/contexts/FaceTrackingContext';
+import { WaveParams } from '@/components/PerlinOcean';
 
 interface DebugPanelProps {
   terrainSettings?: {
@@ -25,9 +26,20 @@ interface DebugPanelProps {
     setNoiseOctaves: (v: number) => void
     setPreset: (preset: 'clear' | 'sunny' | 'cloudy') => void
   }
+  oceanSettings?: {
+    waves: WaveParams[]
+    setWaves: (waves: WaveParams[]) => void
+    opacity: number
+    setOpacity: (v: number) => void
+    foamThreshold: number
+    setFoamThreshold: (v: number) => void
+    setPreset: (preset: 'calm' | 'normal' | 'rough' | 'storm') => void
+    debug: boolean
+    setDebug: (v: boolean) => void
+  }
 }
 
-export default function DebugPanel({ terrainSettings, skySettings }: DebugPanelProps) {
+export default function DebugPanel({ terrainSettings, skySettings, oceanSettings }: DebugPanelProps) {
   const { 
     yaw, 
     pitch, 
@@ -37,8 +49,18 @@ export default function DebugPanel({ terrainSettings, skySettings }: DebugPanelP
     error, 
     permissionDenied,
     showDebug,
-    setShowDebug
+    setShowDebug,
+    fps, avgFps, minFps, maxFps
   } = useFaceTracking();
+
+  const [expandedWave, setExpandedWave] = useState<number | null>(null);
+
+  const updateWave = (index: number, field: keyof WaveParams, value: number | number[]) => {
+    if (!oceanSettings) return;
+    const newWaves = [...oceanSettings.waves];
+    newWaves[index] = { ...newWaves[index], [field]: value };
+    oceanSettings.setWaves(newWaves);
+  };
 
   return (
     <>
@@ -61,6 +83,15 @@ export default function DebugPanel({ terrainSettings, skySettings }: DebugPanelP
           </div>
 
           <div className="space-y-1 mb-4">
+            <div className="flex justify-between">
+              <span className="text-gray-400">FPS:</span>
+              <span className={fps < 30 ? 'text-red-400' : 'text-green-400'}>{fps} (Avg: {avgFps})</span>
+            </div>
+            <div className="flex justify-between text-[10px] text-gray-500 mb-2">
+              <span>Min: {minFps}</span>
+              <span>Max: {maxFps}</span>
+            </div>
+
             <div className="flex justify-between">
               <span className="text-gray-400">Yaw:</span>
               <span>{(yaw * 180 / Math.PI).toFixed(1)}°</span>
@@ -175,6 +206,156 @@ export default function DebugPanel({ terrainSettings, skySettings }: DebugPanelP
                     onChange={(e) => skySettings.setNoiseOctaves(parseInt(e.target.value))}
                     className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                   />
+                </div>
+              </div>
+            </>
+          )}
+
+          {oceanSettings && (
+            <>
+              <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2 pt-2">
+                <span className="font-bold text-cyan-400">Ocean Settings</span>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <span className="text-gray-400 text-[10px]">LOD Debug</span>
+                  <input 
+                    type="checkbox" 
+                    checked={oceanSettings.debug} 
+                    onChange={(e) => oceanSettings.setDebug(e.target.checked)}
+                    className="form-checkbox h-3 w-3 text-cyan-500 rounded focus:ring-0 bg-gray-700 border-gray-600"
+                  />
+                </label>
+              </div>
+
+              <div className="flex space-x-1 mb-3 overflow-x-auto pb-1">
+                <button onClick={() => oceanSettings.setPreset('calm')} className="px-1.5 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-[10px] whitespace-nowrap">Calm</button>
+                <button onClick={() => oceanSettings.setPreset('normal')} className="px-1.5 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-[10px] whitespace-nowrap">Normal</button>
+                <button onClick={() => oceanSettings.setPreset('rough')} className="px-1.5 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-[10px] whitespace-nowrap">Rough</button>
+                <button onClick={() => oceanSettings.setPreset('storm')} className="px-1.5 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-[10px] whitespace-nowrap">Storm</button>
+              </div>
+
+              <div className="space-y-3 mb-4">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Opacity:</span>
+                    <span>{oceanSettings.opacity.toFixed(2)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.05"
+                    value={oceanSettings.opacity}
+                    onChange={(e) => oceanSettings.setOpacity(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Foam Threshold:</span>
+                    <span>{oceanSettings.foamThreshold.toFixed(2)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.05"
+                    value={oceanSettings.foamThreshold}
+                    onChange={(e) => oceanSettings.setFoamThreshold(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                {/* Waves */}
+                <div className="space-y-1">
+                  {oceanSettings.waves.map((wave, index) => (
+                    <div key={index} className="border border-gray-700 rounded p-2">
+                      <div 
+                        className="flex justify-between items-center cursor-pointer"
+                        onClick={() => setExpandedWave(expandedWave === index ? null : index)}
+                      >
+                        <span className="text-xs font-bold text-gray-300">Wave {index + 1}</span>
+                        <span className="text-[10px] text-gray-500">{expandedWave === index ? '▼' : '▶'}</span>
+                      </div>
+                      
+                      {expandedWave === index && (
+                        <div className="mt-2 space-y-2">
+                          <div>
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-gray-400">Amp:</span>
+                              <span>{wave.amplitude.toFixed(2)}</span>
+                            </div>
+                            <input 
+                              type="range" min="0" max="1" step="0.01"
+                              value={wave.amplitude}
+                              onChange={(e) => updateWave(index, 'amplitude', parseFloat(e.target.value))}
+                              className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-gray-400">Len:</span>
+                              <span>{wave.wavelength.toFixed(1)}</span>
+                            </div>
+                            <input 
+                              type="range" min="0.5" max="20" step="0.5"
+                              value={wave.wavelength}
+                              onChange={(e) => updateWave(index, 'wavelength', parseFloat(e.target.value))}
+                              className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-gray-400">Speed:</span>
+                              <span>{wave.speed.toFixed(1)}</span>
+                            </div>
+                            <input 
+                              type="range" min="0" max="3" step="0.1"
+                              value={wave.speed}
+                              onChange={(e) => updateWave(index, 'speed', parseFloat(e.target.value))}
+                              className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-gray-400">Steep:</span>
+                              <span>{wave.steepness.toFixed(2)}</span>
+                            </div>
+                            <input 
+                              type="range" min="0" max="1" step="0.05"
+                              value={wave.steepness}
+                              onChange={(e) => updateWave(index, 'steepness', parseFloat(e.target.value))}
+                              className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-gray-400">Dir X:</span>
+                              <span>{wave.direction[0].toFixed(1)}</span>
+                            </div>
+                            <input 
+                              type="range" min="-1" max="1" step="0.1"
+                              value={wave.direction[0]}
+                              onChange={(e) => updateWave(index, 'direction', [parseFloat(e.target.value), wave.direction[1]])}
+                              className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-[10px]">
+                              <span className="text-gray-400">Dir Z:</span>
+                              <span>{wave.direction[1].toFixed(1)}</span>
+                            </div>
+                            <input 
+                              type="range" min="-1" max="1" step="0.1"
+                              value={wave.direction[1]}
+                              onChange={(e) => updateWave(index, 'direction', [wave.direction[0], parseFloat(e.target.value)])}
+                              className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             </>
