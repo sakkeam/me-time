@@ -68,6 +68,7 @@ export default function Home() {
               >
                 <ambientLight intensity={0.5} />
                 <directionalLight position={[1, 1, 1]} intensity={1} />
+                <PerformanceMonitor />
                 <PerlinBackground 
                   cloudDensity={cloudDensity}
                   cloudCoverage={cloudCoverage}

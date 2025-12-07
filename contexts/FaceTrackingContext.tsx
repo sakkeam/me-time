@@ -27,6 +27,11 @@ interface FaceTrackingState {
   currentExpression: VRMExpression;
   expressionIntensity: number;
   expressionDuration: number;
+  // Performance stats
+  fps: number;
+  avgFps: number;
+  minFps: number;
+  maxFps: number;
 }
 
 interface FaceTrackingContextType extends FaceTrackingState {
@@ -45,6 +50,8 @@ interface FaceTrackingContextType extends FaceTrackingState {
   // Expression control
   setExpression: (expression: VRMExpression, intensity: number, duration: number) => void;
   resetExpression: () => void;
+  // Performance setters
+  setFpsStats: (fps: number, avg: number, min: number, max: number) => void;
 }
 
 const FaceTrackingContext = createContext<FaceTrackingContextType | undefined>(undefined);
@@ -75,6 +82,12 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
   const [currentExpression, setCurrentExpressionState] = useState<VRMExpression>('neutral');
   const [expressionIntensity, setExpressionIntensity] = useState(0);
   const [expressionDuration, setExpressionDuration] = useState(0);
+  
+  // Performance state
+  const [fps, setFps] = useState(0);
+  const [avgFps, setAvgFps] = useState(0);
+  const [minFps, setMinFps] = useState(0);
+  const [maxFps, setMaxFps] = useState(0);
   
   // Initialize debug state from localStorage if available
   const [showDebug, setShowDebugState] = useState(false);
@@ -111,6 +124,13 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
     setCurrentExpressionState('neutral');
     setExpressionIntensity(0);
     setExpressionDuration(0);
+  };
+
+  const setFpsStats = (newFps: number, newAvg: number, newMin: number, newMax: number) => {
+    setFps(newFps);
+    setAvgFps(newAvg);
+    setMinFps(newMin);
+    setMaxFps(newMax);
   };
 
   const setShowDebug = (show: boolean) => {
@@ -151,6 +171,10 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         currentExpression,
         expressionIntensity,
         expressionDuration,
+        fps,
+        avgFps,
+        minFps,
+        maxFps,
         setRotation,
         setPosition,
         setIsDetecting,
@@ -164,6 +188,7 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         setBlinkValues,
         setExpression,
         resetExpression,
+        setFpsStats,
       }}
     >
       {children}
