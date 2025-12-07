@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { AudioRecorder, AudioPlayer } from '@/lib/audioUtils';
-import { useChat } from 'ai/react';
+import { useChat } from '@ai-sdk/react';
 import { useAnimation } from '@/contexts/AnimationContext';
 import { Message } from 'ai';
 
