@@ -3,7 +3,20 @@
 import React from 'react';
 import { useFaceTracking } from '@/contexts/FaceTrackingContext';
 
-export default function DebugPanel() {
+interface DebugPanelProps {
+  terrainSettings?: {
+    scale: number
+    setScale: (v: number) => void
+    amplitude: number
+    setAmplitude: (v: number) => void
+    octaves: number
+    setOctaves: (v: number) => void
+    debug: boolean
+    setDebug: (v: boolean) => void
+  }
+}
+
+export default function DebugPanel({ terrainSettings }: DebugPanelProps) {
   const { 
     yaw, 
     pitch, 
@@ -28,7 +41,7 @@ export default function DebugPanel() {
 
       {/* Stats Panel - Bottom Right (above video) */}
       {showDebug && (
-        <div className="fixed bottom-[270px] right-4 z-50 w-[320px] p-4 bg-gray-900/90 text-white rounded-lg backdrop-blur-md border border-gray-700 shadow-xl font-mono text-xs">
+        <div className="fixed bottom-[270px] right-4 z-50 w-[320px] p-4 bg-gray-900/90 text-white rounded-lg backdrop-blur-md border border-gray-700 shadow-xl font-mono text-xs max-h-[60vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2">
             <span className="font-bold text-blue-400">Face Tracking Stats</span>
             <span className={`px-2 py-0.5 rounded-full ${isDetecting ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
@@ -36,7 +49,7 @@ export default function DebugPanel() {
             </span>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1 mb-4">
             <div className="flex justify-between">
               <span className="text-gray-400">Yaw:</span>
               <span>{(yaw * 180 / Math.PI).toFixed(1)}°</span>
@@ -76,6 +89,73 @@ export default function DebugPanel() {
               </div>
             )}
           </div>
+
+          {terrainSettings && (
+            <>
+              <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2 pt-2">
+                <span className="font-bold text-green-400">Terrain Settings</span>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <span className="text-gray-400 text-[10px]">Wireframe</span>
+                  <input 
+                    type="checkbox" 
+                    checked={terrainSettings.debug} 
+                    onChange={(e) => terrainSettings.setDebug(e.target.checked)}
+                    className="form-checkbox h-3 w-3 text-green-500 rounded focus:ring-0 bg-gray-700 border-gray-600"
+                  />
+                </label>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Scale:</span>
+                    <span>{terrainSettings.scale.toFixed(3)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0.01" 
+                    max="0.1" 
+                    step="0.001"
+                    value={terrainSettings.scale}
+                    onChange={(e) => terrainSettings.setScale(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Amplitude:</span>
+                    <span>{terrainSettings.amplitude.toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="20" 
+                    step="0.5"
+                    value={terrainSettings.amplitude}
+                    onChange={(e) => terrainSettings.setAmplitude(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Octaves:</span>
+                    <span>{terrainSettings.octaves}</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="4" 
+                    step="1"
+                    value={terrainSettings.octaves}
+                    onChange={(e) => terrainSettings.setOctaves(parseInt(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </>

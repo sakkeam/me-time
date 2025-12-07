@@ -1,7 +1,7 @@
 'use client'
 
 import { Canvas } from '@react-three/fiber'
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import { Html, useProgress } from '@react-three/drei'
 import VRMViewer from '@/components/VRMViewer'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -14,6 +14,7 @@ import TranscriptionDisplay from '@/components/TranscriptionDisplay'
 import VirtualCursor from '@/components/VirtualCursor'
 import AnimationDebug from '@/components/AnimationDebug'
 import PerlinBackground from '@/components/PerlinBackground'
+import PerlinTerrain from '@/components/PerlinTerrain'
 
 function Loader() {
   const { progress } = useProgress()
@@ -27,6 +28,11 @@ function Loader() {
 }
 
 export default function Home() {
+  const [terrainScale, setTerrainScale] = useState(0.03)
+  const [terrainAmplitude, setTerrainAmplitude] = useState(8.0)
+  const [terrainOctaves, setTerrainOctaves] = useState(4)
+  const [terrainDebug, setTerrainDebug] = useState(false)
+
   return (
     <FaceTrackingProvider>
       <AnimationProvider>
@@ -40,6 +46,12 @@ export default function Home() {
                 <ambientLight intensity={0.5} />
                 <directionalLight position={[1, 1, 1]} intensity={1} />
                 <PerlinBackground />
+                <PerlinTerrain 
+                  scale={terrainScale} 
+                  amplitude={terrainAmplitude} 
+                  octaves={terrainOctaves} 
+                  debug={terrainDebug} 
+                />
                 <Suspense fallback={<Loader />}>
                   <VRMViewer />
                 </Suspense>
@@ -49,7 +61,18 @@ export default function Home() {
             {/* Face Tracking Components */}
             <FaceTracking />
             <VirtualCursor />
-            <DebugPanel />
+            <DebugPanel 
+              terrainSettings={{
+                scale: terrainScale,
+                setScale: setTerrainScale,
+                amplitude: terrainAmplitude,
+                setAmplitude: setTerrainAmplitude,
+                octaves: terrainOctaves,
+                setOctaves: setTerrainOctaves,
+                debug: terrainDebug,
+                setDebug: setTerrainDebug
+              }}
+            />
             <TranscriptionDisplay />
             <AnimationDebug />
           </div>
