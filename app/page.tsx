@@ -13,6 +13,7 @@ import { AnimationProvider } from '@/contexts/AnimationContext'
 import TranscriptionDisplay from '@/components/TranscriptionDisplay'
 import VirtualCursor from '@/components/VirtualCursor'
 import AnimationDebug from '@/components/AnimationDebug'
+import PerlinBackground from '@/components/PerlinBackground'
 
 function Loader() {
   const { progress } = useProgress()
@@ -38,6 +39,7 @@ export default function Home() {
               >
                 <ambientLight intensity={0.5} />
                 <directionalLight position={[1, 1, 1]} intensity={1} />
+                <PerlinBackground />
                 <Suspense fallback={<Loader />}>
                   <VRMViewer />
                 </Suspense>
