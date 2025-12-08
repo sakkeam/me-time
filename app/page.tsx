@@ -18,6 +18,7 @@ import PerlinTerrain from '@/components/PerlinTerrain'
 import PerlinOcean, { WaveParams } from '@/components/PerlinOcean'
 import PerlinCelestialBody from '@/components/PerlinCelestialBody'
 import PerlinTree from '@/components/PerlinTree'
+import PerlinGrass from '@/components/PerlinGrass'
 import PerformanceMonitor from '@/components/PerformanceMonitor'
 import * as THREE from 'three'
 
@@ -71,6 +72,16 @@ export default function Home() {
   const [treeWindStrength, setTreeWindStrength] = useState(0.5)
   const [treeLoadingProgress, setTreeLoadingProgress] = useState(0)
   const [treeDebug, setTreeDebug] = useState(false)
+
+  // Grass Settings
+  const [grassDensity, setGrassDensity] = useState(1.0)
+  const [grassThreshold, setGrassThreshold] = useState(0.0)
+  const [grassWindStrength, setGrassWindStrength] = useState(0.5)
+  const [grassWindDirection, setGrassWindDirection] = useState<[number, number]>([1, 0.5])
+  const [grassSeedOffset, setGrassSeedOffset] = useState(1000)
+  const [grassUseCrossQuad, setGrassUseCrossQuad] = useState(true)
+  const [grassEnableShadows, setGrassEnableShadows] = useState(false)
+  const [grassDebug, setGrassDebug] = useState(false)
 
   const setSkyPreset = (preset: 'clear' | 'sunny' | 'cloudy') => {
     switch (preset) {
@@ -175,6 +186,20 @@ export default function Home() {
                   debug={treeDebug}
                   onProgress={setTreeLoadingProgress}
                 />
+                <PerlinGrass 
+                  terrainHeightMap={terrainHeightMap}
+                  terrainSize={terrainSize}
+                  terrainPosition={[0, -2, 0]}
+                  density={grassDensity}
+                  threshold={grassThreshold}
+                  oceanLevel={-0.8}
+                  baseWindStrength={grassWindStrength}
+                  windDirection={grassWindDirection}
+                  seedOffset={grassSeedOffset}
+                  useCrossQuad={grassUseCrossQuad}
+                  enableShadows={grassEnableShadows}
+                  debug={grassDebug}
+                />
                 <PerlinOcean 
                   waves={oceanWaves}
                   terrainHeightMap={terrainHeightMap}
@@ -250,6 +275,22 @@ export default function Home() {
                 debug: treeDebug,
                 setDebug: setTreeDebug,
                 loadingProgress: treeLoadingProgress
+              }}
+              grassSettings={{
+                density: grassDensity,
+                setDensity: setGrassDensity,
+                threshold: grassThreshold,
+                setThreshold: setGrassThreshold,
+                windStrength: grassWindStrength,
+                setWindStrength: setGrassWindStrength,
+                windDirection: grassWindDirection,
+                setWindDirection: setGrassWindDirection,
+                seedOffset: grassSeedOffset,
+                setSeedOffset: setGrassSeedOffset,
+                useCrossQuad: grassUseCrossQuad,
+                setUseCrossQuad: setGrassUseCrossQuad,
+                enableShadows: grassEnableShadows,
+                setEnableShadows: setGrassEnableShadows
               }}
             />
             <TranscriptionDisplay />

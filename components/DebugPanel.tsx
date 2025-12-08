@@ -63,9 +63,25 @@ interface DebugPanelProps {
     setDebug: (v: boolean) => void
     loadingProgress: number
   }
+  grassSettings?: {
+    density: number
+    setDensity: (v: number) => void
+    threshold: number
+    setThreshold: (v: number) => void
+    windStrength: number
+    setWindStrength: (v: number) => void
+    windDirection: [number, number]
+    setWindDirection: (v: [number, number]) => void
+    seedOffset: number
+    setSeedOffset: (v: number) => void
+    useCrossQuad: boolean
+    setUseCrossQuad: (v: boolean) => void
+    enableShadows: boolean
+    setEnableShadows: (v: boolean) => void
+  }
 }
 
-export default function DebugPanel({ terrainSettings, skySettings, celestialSettings, oceanSettings, treeSettings }: DebugPanelProps) {
+export default function DebugPanel({ terrainSettings, skySettings, celestialSettings, oceanSettings, treeSettings, grassSettings }: DebugPanelProps) {
   const { 
     yaw, 
     pitch, 
@@ -587,6 +603,116 @@ export default function DebugPanel({ terrainSettings, skySettings, celestialSett
                       <span className="text-[10px] text-gray-300 capitalize">{type}</span>
                     </label>
                   ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {grassSettings && (
+            <>
+              <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2 pt-2">
+                <span className="font-bold text-lime-400">Grass Settings</span>
+              </div>
+              
+              <div className="space-y-3 mb-4">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Density:</span>
+                    <span>{grassSettings.density.toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" min="0.5" max="2.0" step="0.1"
+                    value={grassSettings.density}
+                    onChange={(e) => grassSettings.setDensity(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Threshold:</span>
+                    <span>{grassSettings.threshold.toFixed(2)}</span>
+                  </div>
+                  <input 
+                    type="range" min="-0.3" max="0.3" step="0.05"
+                    value={grassSettings.threshold}
+                    onChange={(e) => grassSettings.setThreshold(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Wind Strength:</span>
+                    <span>{grassSettings.windStrength.toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" min="0" max="1.0" step="0.1"
+                    value={grassSettings.windStrength}
+                    onChange={(e) => grassSettings.setWindStrength(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Wind Dir X:</span>
+                    <span>{grassSettings.windDirection[0].toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" min="-1" max="1" step="0.1"
+                    value={grassSettings.windDirection[0]}
+                    onChange={(e) => grassSettings.setWindDirection([parseFloat(e.target.value), grassSettings.windDirection[1]])}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Wind Dir Y:</span>
+                    <span>{grassSettings.windDirection[1].toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" min="-1" max="1" step="0.1"
+                    value={grassSettings.windDirection[1]}
+                    onChange={(e) => grassSettings.setWindDirection([grassSettings.windDirection[0], parseFloat(e.target.value)])}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Seed Offset:</span>
+                    <span>{grassSettings.seedOffset}</span>
+                  </div>
+                  <input 
+                    type="range" min="0" max="2000" step="100"
+                    value={grassSettings.seedOffset}
+                    onChange={(e) => grassSettings.setSeedOffset(parseInt(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2 mt-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={grassSettings.useCrossQuad} 
+                      onChange={(e) => grassSettings.setUseCrossQuad(e.target.checked)}
+                      className="form-checkbox h-3 w-3 text-lime-500 rounded focus:ring-0 bg-gray-700 border-gray-600"
+                    />
+                    <span className="text-gray-300 text-xs">Cross Quad Geometry</span>
+                  </label>
+
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={grassSettings.enableShadows} 
+                      onChange={(e) => grassSettings.setEnableShadows(e.target.checked)}
+                      className="form-checkbox h-3 w-3 text-lime-500 rounded focus:ring-0 bg-gray-700 border-gray-600"
+                    />
+                    <span className="text-gray-300 text-xs">Enable Shadows</span>
+                  </label>
                 </div>
               </div>
             </>
