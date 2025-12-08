@@ -20,6 +20,9 @@ import PerlinCelestialBody from '@/components/PerlinCelestialBody'
 import PerlinTree from '@/components/PerlinTree'
 import PerlinGrass from '@/components/PerlinGrass'
 import PerlinFlower from '@/components/PerlinFlower'
+import PerlinRoad from '@/components/PerlinRoad'
+import PerlinBuilding from '@/components/PerlinBuilding'
+import { RoadContextProvider } from '@/contexts/RoadContext'
 import PerformanceMonitor from '@/components/PerformanceMonitor'
 import * as THREE from 'three'
 
@@ -185,6 +188,18 @@ export default function Home() {
                     setTerrainSize(size)
                   }}
                 />
+                <RoadContextProvider>
+                  <PerlinRoad 
+                    terrainHeightMap={terrainHeightMap}
+                    terrainSize={terrainSize}
+                    terrainPosition={[0, -2, 0]}
+                  />
+                  <PerlinBuilding 
+                    terrainHeightMap={terrainHeightMap}
+                    terrainSize={terrainSize}
+                    terrainPosition={[0, -2, 0]}
+                  />
+                </RoadContextProvider>
                 <PerlinTree 
                   terrainHeightMap={terrainHeightMap}
                   terrainSize={terrainSize}
