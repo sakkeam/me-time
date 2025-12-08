@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRealtime } from '@/contexts/RealtimeContext';
 import { VoicePreviewPlayer } from '@/lib/audioUtils';
 import { Volume2, Loader2, Square, Play, Pause } from 'lucide-react';
+import { kagome, type MorphemeToken } from '@/lib/kagomeUtils';
+import MorphemeDisplay from '@/components/MorphemeDisplay';
 
 export default function TranscriptionDisplay() {
   const { 
@@ -28,6 +30,41 @@ export default function TranscriptionDisplay() {
   const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const previewPlayerRef = useRef<VoicePreviewPlayer | null>(null);
+
+  const [morphemeTokens, setMorphemeTokens] = useState<MorphemeToken[]>([]);
+  const [kagomeReady, setKagomeReady] = useState(false);
+
+  // Initialize kagome WASM
+  useEffect(() => {
+    kagome.init().then(() => {
+      setKagomeReady(true);
+      console.log('Kagome WASM initialized');
+    }).catch(error => {
+      console.error('Failed to initialize Kagome:', error);
+    });
+  }, []);
+
+  // Get the text to display for assistant response
+  const assistantDisplayText = currentAssistantDelta || assistantResponses[assistantResponses.length - 1]?.text;
+
+  // Tokenize assistant response with debounce
+  useEffect(() => {
+    if (!kagomeReady || !assistantDisplayText) {
+      setMorphemeTokens([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      try {
+        const tokens = kagome.tokenize(assistantDisplayText);
+        setMorphemeTokens(tokens);
+      } catch (error) {
+        console.error('Tokenization failed:', error);
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [assistantDisplayText, kagomeReady]);
 
   useEffect(() => {
     previewPlayerRef.current = new VoicePreviewPlayer(
@@ -58,9 +95,6 @@ export default function TranscriptionDisplay() {
   // Get the text to display for user input
   const userDisplayText = currentDelta || transcriptionItems[transcriptionItems.length - 1]?.text;
   
-  // Get the text to display for assistant response
-  const assistantDisplayText = currentAssistantDelta || assistantResponses[assistantResponses.length - 1]?.text;
-
   return (
     <>
       {/* Assistant Response - Top of Screen */}
@@ -69,7 +103,11 @@ export default function TranscriptionDisplay() {
           <div className="max-w-3xl mx-auto pointer-events-auto">
             <div className="bg-green-600/80 backdrop-blur-md rounded-lg px-8 py-4 text-white shadow-2xl transition-all text-center relative group">
               <p className={`text-lg font-medium ${currentAssistantDelta ? 'animate-pulse' : ''}`}>
-                {assistantDisplayText}
+                {kagomeReady && morphemeTokens.length > 0 ? (
+                  <MorphemeDisplay tokens={morphemeTokens} />
+                ) : (
+                  assistantDisplayText
+                )}
               </p>
               
               {/* Playback Controls */}

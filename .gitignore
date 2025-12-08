@@ -43,3 +43,9 @@ next-env.d.ts
 
 # models
 /public/models/*
+
+# go
+/public/wasm_exec.js
+
+# kagome
+/public/kagome.wasm
