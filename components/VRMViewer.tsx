@@ -16,7 +16,7 @@ export default function VRMViewer() {
   const { 
     yaw, pitch, x, y, z, 
     currentExpression, expressionIntensity, expressionDuration,
-    leftHand, rightHand 
+    leftHand, rightHand, isRotationLocked
   } = useFaceTracking()
   const { currentAnimation, playAnimation } = useAnimation()
   const { mouthOpenAmount } = useRealtime()
@@ -215,7 +215,7 @@ export default function VRMViewer() {
     const YAW_THRESHOLD = 10 * (Math.PI / 180); // 10 degrees
     const YAW_SPEED = 2.0; // Rotation speed
 
-    if (Math.abs(yaw) > YAW_THRESHOLD) {
+    if (!isRotationLocked && Math.abs(yaw) > YAW_THRESHOLD) {
       const sign = Math.sign(yaw);
       // Rotate based on how far past threshold (analog control)
       // Looking Right (yaw > 0) -> Rotate Camera Left (Positive Y)

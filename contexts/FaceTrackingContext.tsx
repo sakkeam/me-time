@@ -26,6 +26,7 @@ interface FaceTrackingState {
   error: string | null;
   permissionDenied: boolean;
   showDebug: boolean;
+  isRotationLocked: boolean;
   // Hand tracking state - dual hand support
   leftHand: HandCursorState;
   rightHand: HandCursorState;
@@ -51,6 +52,7 @@ interface FaceTrackingContextType extends FaceTrackingState {
   setError: (error: string | null) => void;
   setPermissionDenied: (denied: boolean) => void;
   setShowDebug: (show: boolean) => void;
+  setRotationLocked: (locked: boolean) => void;
   // Hand tracking setters - dual hand support
   setLeftHandState: (state: Partial<HandCursorState>) => void;
   setRightHandState: (state: Partial<HandCursorState>) => void;
@@ -75,6 +77,7 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [isRotationLocked, setRotationLocked] = useState(false);
   
   // Hand tracking state - dual hand support
   const [leftHand, setLeftHand] = useState<HandCursorState>({
@@ -190,6 +193,7 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         error,
         permissionDenied,
         showDebug,
+        isRotationLocked,
         leftHand,
         rightHand,
         blinkLeft,
@@ -208,6 +212,7 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         setError,
         setPermissionDenied,
         setShowDebug,
+        setRotationLocked,
         setLeftHandState,
         setRightHandState,
         setBlinkValues,

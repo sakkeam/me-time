@@ -115,6 +115,8 @@ export default function DebugPanel({ terrainSettings, skySettings, celestialSett
     permissionDenied,
     showDebug,
     setShowDebug,
+    isRotationLocked,
+    setRotationLocked,
     fps, avgFps, minFps, maxFps
   } = useFaceTracking();
 
@@ -178,6 +180,19 @@ export default function DebugPanel({ terrainSettings, skySettings, celestialSett
             <div className="flex justify-between">
               <span className="text-gray-400">Pos Z:</span>
               <span>{z.toFixed(2)}</span>
+            </div>
+
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-700">
+              <span className="text-gray-400">Rotation Lock:</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={isRotationLocked} 
+                  onChange={(e) => setRotationLocked(e.target.checked)}
+                  className="sr-only peer" 
+                />
+                <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
             </div>
             
             {isLoading && (
