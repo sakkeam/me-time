@@ -10,7 +10,7 @@ import { FLOWER_COLORS } from '@/lib/flowerGenerator'
 
 const flowerVertexShader = `
 attribute float aInstanceId;
-attribute vec3 color;
+// attribute vec3 color; // Built-in in THREE.ShaderMaterial when vertexColors: true
 varying vec3 vColor;
 varying vec2 vUv;
 varying vec3 vNormal;

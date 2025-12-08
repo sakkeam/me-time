@@ -9,7 +9,7 @@ import { createFlowerGeometry, FLOWER_COLORS } from '@/lib/flowerGenerator'
 // --- Shaders (Duplicated from PerlinFlower.tsx) ---
 const flowerVertexShader = `
 attribute float aInstanceId;
-attribute vec3 color;
+// attribute vec3 color; // Built-in
 varying vec3 vColor;
 varying vec2 vUv;
 varying vec3 vNormal;
