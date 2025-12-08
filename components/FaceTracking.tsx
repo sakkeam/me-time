@@ -20,7 +20,8 @@ export default function FaceTracking() {
   const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(null);
   const requestRef = useRef<number>(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const smoothedCursorRef = useRef<HandCursorPosition>({ x: 0, y: 0 });
+  const leftHandRef = useRef<HandCursorPosition>({ x: 0, y: 0 });
+  const rightHandRef = useRef<HandCursorPosition>({ x: 0, y: 0 });
   
   const { 
     setRotation, 
@@ -30,9 +31,10 @@ export default function FaceTracking() {
     setError, 
     setPermissionDenied,
     showDebug,
-    setCursorPosition,
-    setIsClicking,
-    setIsHandDetected
+    setLeftHandState,
+    setRightHandState,
+    leftHand,
+    rightHand
   } = useFaceTracking();
 
   // Initialize MediaPipe Face Landmarker
@@ -60,7 +62,7 @@ export default function FaceTracking() {
             delegate: "GPU"
           },
           runningMode: "VIDEO",
-          numHands: 1
+          numHands: 2
         });
         
         setFaceLandmarker(landmarker);
@@ -178,77 +180,119 @@ export default function FaceTracking() {
           setIsDetecting(false);
         }
 
-        // Process hand results
+        // Process hand results - support both hands
         if (handResults.landmarks && handResults.landmarks.length > 0) {
-          setIsHandDetected(true);
-          const handLandmarks = handResults.landmarks[0];
+          // Reset detection flags
+          let leftDetected = false;
+          let rightDetected = false;
 
-          // Calculate cursor position
-          const rawCursorPos = calculateStableCursorPosition(handLandmarks, video.videoWidth, video.videoHeight);
-          
-          // Smooth cursor movement
-          const smoothedPos = smoothCursorPosition(smoothedCursorRef.current, rawCursorPos, 0.3);
-          smoothedCursorRef.current = smoothedPos;
-          
-          // Update cursor position
-          setCursorPosition(smoothedPos.x, smoothedPos.y);
-
-          // Detect pinch gesture
-          const isPinching = detectPinch(handLandmarks, 0.04);
-          setIsClicking(isPinching);
-
-          // Draw hand landmarks if debug mode is on
-          if (showDebug) {
-            // Draw connections
-            drawingUtils.drawConnectors(
-              handLandmarks,
-              HandLandmarker.HAND_CONNECTIONS,
-              { color: "#00FF00", lineWidth: 2 }
-            );
+          // Process each detected hand
+          for (let i = 0; i < handResults.landmarks.length; i++) {
+            const handLandmarks = handResults.landmarks[i];
+            const handedness = handResults.handedness[i][0];
+            const isLeftHand = handedness.categoryName === 'Left';
             
-            // Draw landmarks
-            drawingUtils.drawLandmarks(
-              handLandmarks,
-              { color: "#FF0000", lineWidth: 1, radius: 3 }
-            );
+            // Calculate cursor position
+            const rawCursorPos = calculateStableCursorPosition(handLandmarks, video.videoWidth, video.videoHeight);
+            
+            // Detect pinch gesture
+            const isPinching = detectPinch(handLandmarks, 0.04);
 
-            // Draw cursor indicator at projected position
-            // We need to recalculate the projected position in canvas coordinates for visualization
-            // Or just use the smoothed position we already calculated
-            // Since smoothedPos is in screen coordinates, we need to convert back to canvas coordinates
-            // Canvas is 320x240, Screen is window.innerWidth x window.innerHeight
-            
-            const canvasX = (smoothedPos.x / window.innerWidth) * canvas.width;
-            // Mirror X for display
-            const mirroredCanvasX = canvas.width - canvasX;
-            
-            const canvasY = (smoothedPos.y / window.innerHeight) * canvas.height;
+            // Update appropriate hand state
+            if (isLeftHand) {
+              // Smooth cursor movement for left hand
+              const smoothedPos = smoothCursorPosition(
+                leftHandRef.current, 
+                rawCursorPos, 
+                0.3
+              );
+              leftHandRef.current = smoothedPos;
+              
+              setLeftHandState({
+                x: smoothedPos.x,
+                y: smoothedPos.y,
+                isClicking: isPinching,
+                isDetected: true
+              });
+              leftDetected = true;
 
-            ctx!.beginPath();
-            ctx!.arc(
-              mirroredCanvasX,
-              canvasY,
-              10,
-              0,
-              2 * Math.PI
-            );
-            ctx!.strokeStyle = isPinching ? "#FF00FF" : "#00FFFF";
-            ctx!.lineWidth = 3;
-            ctx!.stroke();
-            
-            // Draw line from MCP to projected tip to visualize the projection
-            const indexMCP = handLandmarks[5];
-            ctx!.beginPath();
-            ctx!.moveTo(indexMCP.x * canvas.width, indexMCP.y * canvas.height);
-            ctx!.lineTo(mirroredCanvasX, canvasY);
-            ctx!.strokeStyle = "#FFFF00";
-            ctx!.setLineDash([5, 5]);
-            ctx!.stroke();
-            ctx!.setLineDash([]);
+              // Draw left hand landmarks if debug mode is on
+              if (showDebug) {
+                drawingUtils.drawConnectors(
+                  handLandmarks,
+                  HandLandmarker.HAND_CONNECTIONS,
+                  { color: "#0000FF", lineWidth: 2 } // Blue for left
+                );
+                drawingUtils.drawLandmarks(
+                  handLandmarks,
+                  { color: "#0088FF", lineWidth: 1, radius: 3 }
+                );
+
+                // Draw cursor indicator
+                const canvasX = (smoothedPos.x / window.innerWidth) * canvas.width;
+                const mirroredCanvasX = canvas.width - canvasX;
+                const canvasY = (smoothedPos.y / window.innerHeight) * canvas.height;
+
+                ctx!.beginPath();
+                ctx!.arc(mirroredCanvasX, canvasY, 10, 0, 2 * Math.PI);
+                ctx!.strokeStyle = isPinching ? "#0000FF" : "#00FFFF";
+                ctx!.lineWidth = 3;
+                ctx!.stroke();
+              }
+            } else {
+              // Smooth cursor movement for right hand
+              const smoothedPos = smoothCursorPosition(
+                rightHandRef.current, 
+                rawCursorPos, 
+                0.3
+              );
+              rightHandRef.current = smoothedPos;
+              
+              setRightHandState({
+                x: smoothedPos.x,
+                y: smoothedPos.y,
+                isClicking: isPinching,
+                isDetected: true
+              });
+              rightDetected = true;
+
+              // Draw right hand landmarks if debug mode is on
+              if (showDebug) {
+                drawingUtils.drawConnectors(
+                  handLandmarks,
+                  HandLandmarker.HAND_CONNECTIONS,
+                  { color: "#00FF00", lineWidth: 2 } // Green for right
+                );
+                drawingUtils.drawLandmarks(
+                  handLandmarks,
+                  { color: "#88FF00", lineWidth: 1, radius: 3 }
+                );
+
+                // Draw cursor indicator
+                const canvasX = (smoothedPos.x / window.innerWidth) * canvas.width;
+                const mirroredCanvasX = canvas.width - canvasX;
+                const canvasY = (smoothedPos.y / window.innerHeight) * canvas.height;
+
+                ctx!.beginPath();
+                ctx!.arc(mirroredCanvasX, canvasY, 10, 0, 2 * Math.PI);
+                ctx!.strokeStyle = isPinching ? "#00FF00" : "#00FFFF";
+                ctx!.lineWidth = 3;
+                ctx!.stroke();
+              }
+            }
+          }
+
+          // Update detection states for hands that weren't detected
+          if (!leftDetected) {
+            setLeftHandState({ isDetected: false, isClicking: false });
+          }
+          if (!rightDetected) {
+            setRightHandState({ isDetected: false, isClicking: false });
           }
         } else {
-          setIsHandDetected(false);
-          setIsClicking(false);
+          // No hands detected
+          setLeftHandState({ isDetected: false, isClicking: false });
+          setRightHandState({ isDetected: false, isClicking: false });
         }
       }
     }, 33);

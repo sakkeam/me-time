@@ -3,6 +3,13 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { VRMExpression } from '@/lib/faceUtils';
 
+interface HandCursorState {
+  x: number;
+  y: number;
+  isClicking: boolean;
+  isDetected: boolean;
+}
+
 interface FaceTrackingState {
   yaw: number;
   pitch: number;
@@ -15,11 +22,9 @@ interface FaceTrackingState {
   error: string | null;
   permissionDenied: boolean;
   showDebug: boolean;
-  // Hand tracking state
-  cursorX: number;
-  cursorY: number;
-  isClicking: boolean;
-  isHandDetected: boolean;
+  // Hand tracking state - dual hand support
+  leftHand: HandCursorState;
+  rightHand: HandCursorState;
   // Blink state
   blinkLeft: number;
   blinkRight: number;
@@ -42,10 +47,9 @@ interface FaceTrackingContextType extends FaceTrackingState {
   setError: (error: string | null) => void;
   setPermissionDenied: (denied: boolean) => void;
   setShowDebug: (show: boolean) => void;
-  // Hand tracking setters
-  setCursorPosition: (x: number, y: number) => void;
-  setIsClicking: (clicking: boolean) => void;
-  setIsHandDetected: (detected: boolean) => void;
+  // Hand tracking setters - dual hand support
+  setLeftHandState: (state: Partial<HandCursorState>) => void;
+  setRightHandState: (state: Partial<HandCursorState>) => void;
   setBlinkValues: (left: number, right: number) => void;
   // Expression control
   setExpression: (expression: VRMExpression, intensity: number, duration: number) => void;
@@ -68,11 +72,20 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
   
-  // Hand tracking state
-  const [cursorX, setCursorX] = useState(0);
-  const [cursorY, setCursorY] = useState(0);
-  const [isClicking, setIsClicking] = useState(false);
-  const [isHandDetected, setIsHandDetected] = useState(false);
+  // Hand tracking state - dual hand support
+  const [leftHand, setLeftHand] = useState<HandCursorState>({
+    x: 0,
+    y: 0,
+    isClicking: false,
+    isDetected: false
+  });
+  
+  const [rightHand, setRightHand] = useState<HandCursorState>({
+    x: 0,
+    y: 0,
+    isClicking: false,
+    isDetected: false
+  });
   
   // Blink state
   const [blinkLeft, setBlinkLeft] = useState(0);
@@ -104,9 +117,12 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
     setZ(newZ);
   };
 
-  const setCursorPosition = (newX: number, newY: number) => {
-    setCursorX(newX);
-    setCursorY(newY);
+  const setLeftHandState = (state: Partial<HandCursorState>) => {
+    setLeftHand(prev => ({ ...prev, ...state }));
+  };
+
+  const setRightHandState = (state: Partial<HandCursorState>) => {
+    setRightHand(prev => ({ ...prev, ...state }));
   };
 
   const setBlinkValues = (left: number, right: number) => {
@@ -162,10 +178,8 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         error,
         permissionDenied,
         showDebug,
-        cursorX,
-        cursorY,
-        isClicking,
-        isHandDetected,
+        leftHand,
+        rightHand,
         blinkLeft,
         blinkRight,
         currentExpression,
@@ -182,9 +196,8 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
         setError,
         setPermissionDenied,
         setShowDebug,
-        setCursorPosition,
-        setIsClicking,
-        setIsHandDetected,
+        setLeftHandState,
+        setRightHandState,
         setBlinkValues,
         setExpression,
         resetExpression,
