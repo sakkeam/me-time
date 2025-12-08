@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useFaceTracking } from '@/contexts/FaceTrackingContext';
 import { WaveParams } from '@/components/PerlinOcean';
+import TreePreview from './TreePreview';
 
 interface DebugPanelProps {
   terrainSettings?: {
@@ -79,6 +80,7 @@ export default function DebugPanel({ terrainSettings, skySettings, celestialSett
   } = useFaceTracking();
 
   const [expandedWave, setExpandedWave] = useState<number | null>(null);
+  const [previewType, setPreviewType] = useState<string>('conifer');
 
   const updateWave = (index: number, field: keyof WaveParams, value: number | number[]) => {
     if (!oceanSettings) return;
@@ -510,6 +512,21 @@ export default function DebugPanel({ terrainSettings, skySettings, celestialSett
                     />
                   </label>
                 </div>
+              </div>
+
+              <TreePreview type={previewType} seed={treeSettings.seed} />
+              
+              <div className="flex justify-between items-center mb-3">
+                 <span className="text-gray-400 text-xs">Preview Type:</span>
+                 <select 
+                   value={previewType} 
+                   onChange={(e) => setPreviewType(e.target.value)}
+                   className="bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-600 outline-none capitalize"
+                 >
+                   {['conifer', 'deciduous', 'bush', 'willow', 'palm'].map(t => (
+                     <option key={t} value={t}>{t}</option>
+                   ))}
+                 </select>
               </div>
 
               <div className="space-y-3 mb-4">
