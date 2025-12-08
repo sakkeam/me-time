@@ -28,8 +28,8 @@ export default function VRMViewer() {
   const currentY = useRef(0)
   const currentZ = useRef(0)
   
-  // Camera Z offset for walking (forward/backward)
-  const currentCameraZOffset = useRef(0)
+  // Camera position state (Free roaming)
+  const cameraPos = useRef(new THREE.Vector3(0, 1.4, 1.5))
 
   const gltf = useLoader(GLTFLoader, '/assets/AliciaSolid.vrm', (loader) => {
     loader.register((parser) => {
@@ -218,20 +218,27 @@ export default function VRMViewer() {
     if (Math.abs(yaw) > YAW_THRESHOLD) {
       const sign = Math.sign(yaw);
       // Rotate based on how far past threshold (analog control)
+      // Looking Right (yaw > 0) -> Rotate Camera Left (Positive Y)
+      // Looking Left (yaw < 0) -> Rotate Camera Right (Negative Y)
       currentYaw.current += sign * (Math.abs(yaw) - YAW_THRESHOLD) * YAW_SPEED * delta;
     }
 
     // Pitch remains absolute (Position-based)
     currentPitch.current = lerp(currentPitch.current, pitch, 0.1)
     
-    // Smoothly interpolate current position offset
+    // Apply rotation to camera
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = currentYaw.current;
+    camera.rotation.x = currentPitch.current;
+    
+    // Smoothly interpolate current position offset (Parallax)
     currentX.current = lerp(currentX.current, x, 0.1)
     currentY.current = lerp(currentY.current, y, 0.1)
     currentZ.current = lerp(currentZ.current, z, 0.1)
 
-    // Camera Z movement based on long pinch + hand depth
-    const CAMERA_MOVE_SPEED = 3.0; // Increased speed for more movement
-    const DEPTH_DEADZONE = 0.005; // Adjusted for hand size scale
+    // Camera movement based on long pinch + hand depth
+    const CAMERA_MOVE_SPEED = 3.0; 
+    const DEPTH_DEADZONE = 0.005; 
     
     // Check for long pinch on either hand
     const leftLongPinch = leftHand.isLongPinch && leftHand.isDetected;
@@ -239,37 +246,39 @@ export default function VRMViewer() {
 
     if (leftLongPinch || rightLongPinch) {
       // Use right hand if both are pinching, otherwise use whichever is pinching
-      // Prefer right hand if both active
       const activeHand = rightLongPinch ? rightHand : leftHand;
-      const depthChange = activeHand.z; // This is now "size change"
+      const depthChange = activeHand.z; 
       
       if (Math.abs(depthChange) > DEPTH_DEADZONE) {
-        // depthChange > 0 means hand is larger (Closer to camera)
-        // We want to move forward (Decrease Camera Z / Radius)
+        // depthChange > 0 means hand is larger (Closer to camera) -> Move Forward
+        // depthChange < 0 means hand is smaller (Farther from camera) -> Move Backward
         
-        // depthChange < 0 means hand is smaller (Farther from camera)
-        // We want to move backward (Increase Camera Z / Radius)
+        const moveAmount = depthChange * CAMERA_MOVE_SPEED * delta * 5.0;
         
-        // So we subtract depthChange from current offset
-        const targetZOffset = currentCameraZOffset.current - (depthChange * CAMERA_MOVE_SPEED);
+        // Calculate forward vector (projected on horizontal plane)
+        const forward = new THREE.Vector3(0, 0, -1);
+        forward.applyQuaternion(camera.quaternion);
+        forward.y = 0; // Walk on plane
+        forward.normalize();
         
-        // No clamp range - allow infinite movement
-        currentCameraZOffset.current = targetZOffset;
+        cameraPos.current.addScaledVector(forward, moveAmount);
       }
     }
 
-    // Calculate new camera position
-    const [camX, camY, camZ] = getCameraPosition(
-      currentYaw.current,
-      currentPitch.current,
-      1.5 + currentCameraZOffset.current, // Apply Z offset to radius
-      [0, 1.4, 0], // Center target
-      { x: currentX.current, y: currentY.current, z: currentZ.current } // Positional offset
-    )
+    // Calculate parallax offset in camera local space
+    const rightVec = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+    const upVec = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+    const forwardVec = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    
+    const parallaxOffset = new THREE.Vector3()
+        .addScaledVector(rightVec, currentX.current * 0.5)
+        .addScaledVector(upVec, -currentY.current * 0.5) // Invert Y for screen space
+        .addScaledVector(forwardVec, currentZ.current * 0.5);
 
-    // Update camera position and look at target
-    camera.position.set(camX, camY, camZ)
-    camera.lookAt(0, 1.4, 0)
+    // Update camera position
+    camera.position.copy(cameraPos.current).add(parallaxOffset);
+    
+    // Removed camera.lookAt to allow free rotation
   })
 
   if (!vrm) return null
