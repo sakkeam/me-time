@@ -8,6 +8,10 @@ interface HandCursorState {
   y: number;
   isClicking: boolean;
   isDetected: boolean;
+  z: number;
+  isPinching: boolean;
+  isLongPinch: boolean;
+  pinchDuration: number;
 }
 
 interface FaceTrackingState {
@@ -77,14 +81,22 @@ export function FaceTrackingProvider({ children }: { children: ReactNode }) {
     x: 0,
     y: 0,
     isClicking: false,
-    isDetected: false
+    isDetected: false,
+    z: 0,
+    isPinching: false,
+    isLongPinch: false,
+    pinchDuration: 0
   });
   
   const [rightHand, setRightHand] = useState<HandCursorState>({
     x: 0,
     y: 0,
     isClicking: false,
-    isDetected: false
+    isDetected: false,
+    z: 0,
+    isPinching: false,
+    isLongPinch: false,
+    pinchDuration: 0
   });
   
   // Blink state

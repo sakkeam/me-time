@@ -181,6 +181,68 @@ export function detectPinch(landmarks: NormalizedLandmark[], threshold: number =
 }
 
 /**
+ * Detect long pinch gesture (pinch held for a certain duration)
+ * Returns true if pinch has been held for the specified duration
+ */
+export function detectLongPinch(
+  landmarks: NormalizedLandmark[],
+  pinchStartTime: number | null,
+  currentTime: number,
+  threshold: number = 0.04,
+  duration: number = 0.5
+): { isLongPinch: boolean; pinchDuration: number } {
+  const isPinching = detectPinch(landmarks, threshold);
+  
+  if (!isPinching) {
+    return { isLongPinch: false, pinchDuration: 0 };
+  }
+  
+  if (pinchStartTime === null) {
+    return { isLongPinch: false, pinchDuration: 0 };
+  }
+  
+  const elapsed = (currentTime - pinchStartTime) / 1000; // Convert to seconds
+  const isLongPinch = elapsed >= duration;
+  
+  return { isLongPinch, pinchDuration: elapsed };
+}
+
+/**
+ * Extract hand depth (Z-axis) from landmarks
+ * Returns smoothed depth value and normalized depth
+ */
+export function extractHandDepth(
+  landmarks: NormalizedLandmark[],
+  referenceDepth: number = 0
+): { depth: number; normalizedDepth: number } {
+  // Use wrist (landmark 0) and index MCP (landmark 5) average for stable depth
+  const wrist = landmarks[0];
+  const indexMCP = landmarks[5];
+  
+  const depth = (wrist.z + indexMCP.z) / 2;
+  
+  // Normalize depth relative to reference (initial pinch position)
+  // Note: In MediaPipe, smaller Z is closer to camera (negative is closer than positive)
+  // But usually Z is relative to the wrist in hand landmarks if using world landmarks, 
+  // or relative to image plane in normalized landmarks.
+  // For normalized landmarks, Z is roughly same scale as X.
+  const normalizedDepth = depth - referenceDepth;
+  
+  return { depth, normalizedDepth };
+}
+
+/**
+ * Smooth depth value using exponential moving average
+ */
+export function smoothDepth(
+  current: number,
+  target: number,
+  smoothingFactor: number = 0.1
+): number {
+  return lerp(current, target, smoothingFactor);
+}
+
+/**
  * Smooth cursor movement using exponential moving average
  */
 export function smoothCursorPosition(

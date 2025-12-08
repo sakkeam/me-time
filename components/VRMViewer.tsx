@@ -13,7 +13,11 @@ import * as THREE from 'three'
 
 export default function VRMViewer() {
   const { camera } = useThree()
-  const { yaw, pitch, x, y, z, currentExpression, expressionIntensity, expressionDuration } = useFaceTracking()
+  const { 
+    yaw, pitch, x, y, z, 
+    currentExpression, expressionIntensity, expressionDuration,
+    leftHand, rightHand 
+  } = useFaceTracking()
   const { currentAnimation, playAnimation } = useAnimation()
   const { mouthOpenAmount } = useRealtime()
   
@@ -23,6 +27,9 @@ export default function VRMViewer() {
   const currentX = useRef(0)
   const currentY = useRef(0)
   const currentZ = useRef(0)
+  
+  // Camera Z offset for walking (forward/backward)
+  const currentCameraZOffset = useRef(0)
 
   const gltf = useLoader(GLTFLoader, '/assets/AliciaSolid.vrm', (loader) => {
     loader.register((parser) => {
@@ -213,11 +220,66 @@ export default function VRMViewer() {
     currentY.current = lerp(currentY.current, y, 0.1)
     currentZ.current = lerp(currentZ.current, z, 0.1)
 
+    // Camera Z movement based on long pinch + hand depth
+    const CAMERA_MOVE_SPEED = 2.0; // Adjust movement speed
+    const DEPTH_DEADZONE = 0.02; // Ignore small depth changes
+    
+    // Check for long pinch on either hand
+    const leftLongPinch = leftHand.isLongPinch && leftHand.isDetected;
+    const rightLongPinch = rightHand.isLongPinch && rightHand.isDetected;
+
+    if (leftLongPinch || rightLongPinch) {
+      // Use right hand if both are pinching, otherwise use whichever is pinching
+      // Prefer right hand if both active
+      const activeHand = rightLongPinch ? rightHand : leftHand;
+      const depthChange = activeHand.z;
+      
+      if (Math.abs(depthChange) > DEPTH_DEADZONE) {
+        // Negative depth = hand closer = move forward (decrease Z)
+        // Positive depth = hand farther = move backward (increase Z)
+        // Note: In MediaPipe, smaller Z is closer. 
+        // If hand moves closer (negative change), we want to move forward (decrease camera Z).
+        // If hand moves farther (positive change), we want to move backward (increase camera Z).
+        // So the sign matches.
+        
+        // However, let's verify the direction.
+        // If I pull my hand back (closer to me), I want to pull the world closer? Or move myself back?
+        // "Long pinch -> hand position forward/backward"
+        // Usually:
+        // Push hand forward -> Move forward (Walk)
+        // Pull hand back -> Move backward
+        
+        // MediaPipe Z: 
+        // Closer to camera = smaller/negative Z
+        // Farther from camera = larger/positive Z
+        
+        // So:
+        // Push forward (away from body) -> Z increases (positive) -> Move forward (decrease Camera Z)
+        // Pull back (towards body) -> Z decreases (negative) -> Move backward (increase Camera Z)
+        
+        // So we want:
+        // Positive depth (push) -> Negative Camera Z change
+        // Negative depth (pull) -> Positive Camera Z change
+        
+        const targetZOffset = currentCameraZOffset.current - (depthChange * 0.05); // Incremental change
+        
+        // Clamp range if needed, or let it be free
+        // Let's clamp to reasonable walking distance
+        // Initial camera is at 1.5. 
+        // Min distance 0.5 (too close), Max distance 5.0
+        const newTotalZ = 1.5 + targetZOffset;
+        
+        if (newTotalZ >= 0.5 && newTotalZ <= 5.0) {
+           currentCameraZOffset.current = targetZOffset;
+        }
+      }
+    }
+
     // Calculate new camera position
     const [camX, camY, camZ] = getCameraPosition(
       currentYaw.current,
       currentPitch.current,
-      1.5, // Radius
+      1.5 + currentCameraZOffset.current, // Apply Z offset to radius
       [0, 1.4, 0], // Center target
       { x: currentX.current, y: currentY.current, z: currentZ.current } // Positional offset
     )

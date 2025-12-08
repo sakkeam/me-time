@@ -8,6 +8,7 @@ function SingleCursor({
   y, 
   isClicking, 
   isDetected, 
+  isLongPinch,
   color,
   handLabel 
 }: { 
@@ -15,6 +16,7 @@ function SingleCursor({
   y: number; 
   isClicking: boolean; 
   isDetected: boolean;
+  isLongPinch?: boolean;
   color: 'blue' | 'green';
   handLabel: string;
 }) {
@@ -33,7 +35,8 @@ function SingleCursor({
   useEffect(() => {
     if (!isDetected) return;
 
-    if (isClicking) {
+    // Only click if it's a short pinch (not long pinch)
+    if (isClicking && !isLongPinch) {
       // Simulate mouse click at cursor position
       const element = document.elementFromPoint(x, y);
       if (element && element instanceof HTMLElement) {
@@ -55,7 +58,7 @@ function SingleCursor({
         }
       }
     }
-  }, [isClicking, x, y, isDetected]);
+  }, [isClicking, isLongPinch, x, y, isDetected]);
 
   if (!isDetected) return null;
 
@@ -64,13 +67,17 @@ function SingleCursor({
       border: 'border-blue-500',
       bg: 'bg-blue-500/20',
       clickBorder: 'border-blue-600',
-      clickBg: 'bg-blue-600/30'
+      clickBg: 'bg-blue-600/30',
+      longPinchBorder: 'border-purple-500',
+      longPinchBg: 'bg-purple-500/40'
     },
     green: {
       border: 'border-green-500',
       bg: 'bg-green-500/20',
       clickBorder: 'border-green-600',
-      clickBg: 'bg-green-600/30'
+      clickBg: 'bg-green-600/30',
+      longPinchBorder: 'border-purple-500',
+      longPinchBg: 'bg-purple-500/40'
     }
   };
 
@@ -90,11 +97,16 @@ function SingleCursor({
     >
       <div
         className={`w-full h-full rounded-full border-4 ${
-          isClicking 
-            ? `${colors.clickBorder} ${colors.clickBg}` 
-            : `${colors.border} ${colors.bg}`
+          isLongPinch
+            ? `${colors.longPinchBorder} ${colors.longPinchBg}`
+            : isClicking 
+              ? `${colors.clickBorder} ${colors.clickBg}` 
+              : `${colors.border} ${colors.bg}`
         } shadow-lg transition-colors`}
       />
+      {isLongPinch && (
+        <div className="absolute inset-0 rounded-full border-2 border-purple-400 animate-ping opacity-75" />
+      )}
     </div>
   );
 }
@@ -109,6 +121,7 @@ export default function VirtualCursor() {
         y={leftHand.y} 
         isClicking={leftHand.isClicking}
         isDetected={leftHand.isDetected}
+        isLongPinch={leftHand.isLongPinch}
         color="blue"
         handLabel="Left"
       />
@@ -117,6 +130,7 @@ export default function VirtualCursor() {
         y={rightHand.y} 
         isClicking={rightHand.isClicking}
         isDetected={rightHand.isDetected}
+        isLongPinch={rightHand.isLongPinch}
         color="green"
         handLabel="Right"
       />

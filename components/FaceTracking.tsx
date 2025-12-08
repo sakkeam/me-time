@@ -9,6 +9,9 @@ import {
   clampRotation,
   calculateStableCursorPosition,
   detectPinch,
+  detectLongPinch,
+  extractHandDepth,
+  smoothDepth,
   smoothCursorPosition,
   HandCursorPosition
 } from '@/lib/faceUtils';
@@ -23,8 +26,16 @@ export default function FaceTracking() {
   const leftHandRef = useRef<HandCursorPosition>({ x: 0, y: 0 });
   const rightHandRef = useRef<HandCursorPosition>({ x: 0, y: 0 });
   
+  // Long pinch & depth tracking refs
+  const leftPinchStartTimeRef = useRef<number | null>(null);
+  const rightPinchStartTimeRef = useRef<number | null>(null);
+  const leftReferenceDepthRef = useRef<number>(0);
+  const rightReferenceDepthRef = useRef<number>(0);
+  const leftCurrentDepthRef = useRef<number>(0);
+  const rightCurrentDepthRef = useRef<number>(0);
+
   const { 
-    setRotation, 
+    setRotation,  
     setPosition,
     setIsDetecting, 
     setIsLoading, 
@@ -197,9 +208,45 @@ export default function FaceTracking() {
             
             // Detect pinch gesture
             const isPinching = detectPinch(handLandmarks, 0.04);
+            const currentTime = performance.now();
 
             // Update appropriate hand state
             if (isLeftHand) {
+              // Handle pinch timing and depth
+              if (isPinching) {
+                if (leftPinchStartTimeRef.current === null) {
+                  leftPinchStartTimeRef.current = currentTime;
+                  // Set reference depth when pinch starts
+                  const { depth } = extractHandDepth(handLandmarks);
+                  leftReferenceDepthRef.current = depth;
+                }
+              } else {
+                leftPinchStartTimeRef.current = null;
+              }
+
+              // Calculate long pinch status
+              const { isLongPinch, pinchDuration } = detectLongPinch(
+                handLandmarks,
+                leftPinchStartTimeRef.current,
+                currentTime
+              );
+
+              // Calculate depth
+              const { depth } = extractHandDepth(handLandmarks);
+              let normalizedDepth = 0;
+              
+              if (isLongPinch) {
+                // Calculate relative depth change since pinch started
+                normalizedDepth = depth - leftReferenceDepthRef.current;
+              }
+              
+              // Smooth depth
+              leftCurrentDepthRef.current = smoothDepth(
+                leftCurrentDepthRef.current,
+                normalizedDepth,
+                0.1
+              );
+
               // Smooth cursor movement for left hand
               const smoothedPos = smoothCursorPosition(
                 leftHandRef.current, 
@@ -212,7 +259,11 @@ export default function FaceTracking() {
                 x: smoothedPos.x,
                 y: smoothedPos.y,
                 isClicking: isPinching,
-                isDetected: true
+                isDetected: true,
+                z: leftCurrentDepthRef.current,
+                isPinching,
+                isLongPinch,
+                pinchDuration
               });
               leftDetected = true;
 
@@ -235,11 +286,46 @@ export default function FaceTracking() {
 
                 ctx!.beginPath();
                 ctx!.arc(mirroredCanvasX, canvasY, 10, 0, 2 * Math.PI);
-                ctx!.strokeStyle = isPinching ? "#0000FF" : "#00FFFF";
-                ctx!.lineWidth = 3;
+                ctx!.strokeStyle = isLongPinch ? "#FF00FF" : (isPinching ? "#0000FF" : "#00FFFF");
+                ctx!.lineWidth = isLongPinch ? 5 : 3;
                 ctx!.stroke();
               }
             } else {
+              // Handle pinch timing and depth for right hand
+              if (isPinching) {
+                if (rightPinchStartTimeRef.current === null) {
+                  rightPinchStartTimeRef.current = currentTime;
+                  // Set reference depth when pinch starts
+                  const { depth } = extractHandDepth(handLandmarks);
+                  rightReferenceDepthRef.current = depth;
+                }
+              } else {
+                rightPinchStartTimeRef.current = null;
+              }
+
+              // Calculate long pinch status
+              const { isLongPinch, pinchDuration } = detectLongPinch(
+                handLandmarks,
+                rightPinchStartTimeRef.current,
+                currentTime
+              );
+
+              // Calculate depth
+              const { depth } = extractHandDepth(handLandmarks);
+              let normalizedDepth = 0;
+              
+              if (isLongPinch) {
+                // Calculate relative depth change since pinch started
+                normalizedDepth = depth - rightReferenceDepthRef.current;
+              }
+              
+              // Smooth depth
+              rightCurrentDepthRef.current = smoothDepth(
+                rightCurrentDepthRef.current,
+                normalizedDepth,
+                0.1
+              );
+
               // Smooth cursor movement for right hand
               const smoothedPos = smoothCursorPosition(
                 rightHandRef.current, 
@@ -252,7 +338,11 @@ export default function FaceTracking() {
                 x: smoothedPos.x,
                 y: smoothedPos.y,
                 isClicking: isPinching,
-                isDetected: true
+                isDetected: true,
+                z: rightCurrentDepthRef.current,
+                isPinching,
+                isLongPinch,
+                pinchDuration
               });
               rightDetected = true;
 
@@ -275,8 +365,8 @@ export default function FaceTracking() {
 
                 ctx!.beginPath();
                 ctx!.arc(mirroredCanvasX, canvasY, 10, 0, 2 * Math.PI);
-                ctx!.strokeStyle = isPinching ? "#00FF00" : "#00FFFF";
-                ctx!.lineWidth = 3;
+                ctx!.strokeStyle = isLongPinch ? "#FF00FF" : (isPinching ? "#00FF00" : "#00FFFF");
+                ctx!.lineWidth = isLongPinch ? 5 : 3;
                 ctx!.stroke();
               }
             }
@@ -284,15 +374,19 @@ export default function FaceTracking() {
 
           // Update detection states for hands that weren't detected
           if (!leftDetected) {
-            setLeftHandState({ isDetected: false, isClicking: false });
+            setLeftHandState({ isDetected: false, isClicking: false, isPinching: false, isLongPinch: false, z: 0 });
+            leftPinchStartTimeRef.current = null;
           }
           if (!rightDetected) {
-            setRightHandState({ isDetected: false, isClicking: false });
+            setRightHandState({ isDetected: false, isClicking: false, isPinching: false, isLongPinch: false, z: 0 });
+            rightPinchStartTimeRef.current = null;
           }
         } else {
           // No hands detected
-          setLeftHandState({ isDetected: false, isClicking: false });
-          setRightHandState({ isDetected: false, isClicking: false });
+          setLeftHandState({ isDetected: false, isClicking: false, isPinching: false, isLongPinch: false, z: 0 });
+          setRightHandState({ isDetected: false, isClicking: false, isPinching: false, isLongPinch: false, z: 0 });
+          leftPinchStartTimeRef.current = null;
+          rightPinchStartTimeRef.current = null;
         }
       }
     }, 33);
