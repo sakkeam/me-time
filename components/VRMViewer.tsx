@@ -211,8 +211,17 @@ export default function VRMViewer() {
       }
     }
 
-    // Smoothly interpolate current rotation towards target rotation
-    currentYaw.current = lerp(currentYaw.current, yaw, 0.1)
+    // Yaw control: Rate-based rotation with threshold (Joystick-like)
+    const YAW_THRESHOLD = 10 * (Math.PI / 180); // 10 degrees
+    const YAW_SPEED = 2.0; // Rotation speed
+
+    if (Math.abs(yaw) > YAW_THRESHOLD) {
+      const sign = Math.sign(yaw);
+      // Rotate based on how far past threshold (analog control)
+      currentYaw.current += sign * (Math.abs(yaw) - YAW_THRESHOLD) * YAW_SPEED * delta;
+    }
+
+    // Pitch remains absolute (Position-based)
     currentPitch.current = lerp(currentPitch.current, pitch, 0.1)
     
     // Smoothly interpolate current position offset
