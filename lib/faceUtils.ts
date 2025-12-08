@@ -208,27 +208,32 @@ export function detectLongPinch(
 }
 
 /**
- * Extract hand depth (Z-axis) from landmarks
+ * Extract hand depth (Z-axis proxy) from landmarks
+ * Uses hand size (distance between wrist and middle finger MCP) as a proxy for depth
  * Returns smoothed depth value and normalized depth
  */
 export function extractHandDepth(
   landmarks: NormalizedLandmark[],
   referenceDepth: number = 0
 ): { depth: number; normalizedDepth: number } {
-  // Use wrist (landmark 0) and index MCP (landmark 5) average for stable depth
+  // Use Wrist (0) and Middle Finger MCP (9) distance as a proxy for hand size/depth
+  // When hand is closer to camera, this distance increases
   const wrist = landmarks[0];
-  const indexMCP = landmarks[5];
+  const middleMCP = landmarks[9];
   
-  const depth = (wrist.z + indexMCP.z) / 2;
+  // Calculate 2D Euclidean distance
+  // We ignore Z here because we want the apparent size on screen
+  const size = Math.sqrt(
+    Math.pow(wrist.x - middleMCP.x, 2) + 
+    Math.pow(wrist.y - middleMCP.y, 2)
+  );
   
   // Normalize depth relative to reference (initial pinch position)
-  // Note: In MediaPipe, smaller Z is closer to camera (negative is closer than positive)
-  // But usually Z is relative to the wrist in hand landmarks if using world landmarks, 
-  // or relative to image plane in normalized landmarks.
-  // For normalized landmarks, Z is roughly same scale as X.
-  const normalizedDepth = depth - referenceDepth;
+  // Positive normalizedDepth = Hand is larger (Closer)
+  // Negative normalizedDepth = Hand is smaller (Farther)
+  const normalizedDepth = size - referenceDepth;
   
-  return { depth, normalizedDepth };
+  return { depth: size, normalizedDepth };
 }
 
 /**

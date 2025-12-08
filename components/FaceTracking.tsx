@@ -237,6 +237,8 @@ export default function FaceTracking() {
               
               if (isLongPinch) {
                 // Calculate relative depth change since pinch started
+                // depth is now "hand size"
+                // normalizedDepth > 0 means hand is larger (closer)
                 normalizedDepth = depth - leftReferenceDepthRef.current;
               }
               
@@ -316,6 +318,8 @@ export default function FaceTracking() {
               
               if (isLongPinch) {
                 // Calculate relative depth change since pinch started
+                // depth is now "hand size"
+                // normalizedDepth > 0 means hand is larger (closer)
                 normalizedDepth = depth - rightReferenceDepthRef.current;
               }
               
