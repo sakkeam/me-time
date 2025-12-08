@@ -221,7 +221,7 @@ export default function VRMViewer() {
     currentZ.current = lerp(currentZ.current, z, 0.1)
 
     // Camera Z movement based on long pinch + hand depth
-    const CAMERA_MOVE_SPEED = 0.5; // Adjusted for hand size scale (smaller values)
+    const CAMERA_MOVE_SPEED = 1.5; // Increased speed for more movement
     const DEPTH_DEADZONE = 0.005; // Adjusted for hand size scale
     
     // Check for long pinch on either hand
