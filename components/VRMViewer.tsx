@@ -7,6 +7,7 @@ import { VRMLoaderPlugin, VRMUtils, VRM } from '@pixiv/three-vrm'
 import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation'
 import { useFaceTracking } from '@/contexts/FaceTrackingContext'
 import { useAnimation, ANIMATION_REGISTRY } from '@/contexts/AnimationContext'
+import { useRealtime } from '@/contexts/RealtimeContext'
 import { getCameraPosition, lerp, AutoBlink, ExpressionManager } from '@/lib/faceUtils'
 import * as THREE from 'three'
 
@@ -14,6 +15,7 @@ export default function VRMViewer() {
   const { camera } = useThree()
   const { yaw, pitch, x, y, z, currentExpression, expressionIntensity, expressionDuration } = useFaceTracking()
   const { currentAnimation, playAnimation } = useAnimation()
+  const { mouthOpenAmount } = useRealtime()
   
   // Store current camera rotation and position for smoothing
   const currentYaw = useRef(0)
@@ -34,6 +36,7 @@ export default function VRMViewer() {
   const loaderRef = useRef<GLTFLoader>(new GLTFLoader())
   const autoBlinkRef = useRef<AutoBlink>(new AutoBlink())
   const expressionManagerRef = useRef<ExpressionManager>(new ExpressionManager())
+  const currentMouthOpen = useRef(0)
 
   useEffect(() => {
     loaderRef.current.register((parser) => {
@@ -147,6 +150,10 @@ export default function VRMViewer() {
       expressionManagerRef.current.update(delta, isEmotionAnimation)
       const expressionValues = expressionManagerRef.current.getExpressionValues()
       
+      // Smooth mouth open amount for lip sync
+      const smoothingFactor = 0.3 // Higher = more responsive, Lower = smoother
+      currentMouthOpen.current = lerp(currentMouthOpen.current, mouthOpenAmount, smoothingFactor)
+
       // Apply blink and expressions to VRM
       if (vrm.expressionManager) {
         // Apply blink
@@ -161,6 +168,16 @@ export default function VRMViewer() {
         vrm.expressionManager.setValue('angry', expressionValues.angry)
         vrm.expressionManager.setValue('relaxed', Math.min(1, expressionValues.relaxed + expressionValues.happy))
         vrm.expressionManager.setValue('surprised', expressionValues.surprised)
+
+        // Apply lip sync - try 'aa' first (VRM 1.0), fallback to other mouth shapes
+        const mouthValue = currentMouthOpen.current
+        vrm.expressionManager.setValue('aa', mouthValue) // Mouth open (VRM 1.0)
+        
+        // Also try legacy VRM 0.0 naming if 'aa' doesn't exist
+        // The model might use different naming conventions
+        if (vrm.expressionManager.getExpressionTrackName('a')) {
+          vrm.expressionManager.setValue('a', mouthValue)
+        }
       } else if ((vrm as any).expressions) {
         // Fallback for different VRM versions
         const expressions = (vrm as any).expressions
@@ -176,6 +193,13 @@ export default function VRMViewer() {
           expressions.setValue('angry', expressionValues.angry)
           expressions.setValue('relaxed', Math.min(1, expressionValues.relaxed + expressionValues.happy))
           expressions.setValue('surprised', expressionValues.surprised)
+
+          // Apply lip sync
+          const mouthValue = currentMouthOpen.current
+          expressions.setValue('aa', mouthValue)
+          if (expressions.getExpressionTrackName && expressions.getExpressionTrackName('a')) {
+            expressions.setValue('a', mouthValue)
+          }
         }
       }
     }

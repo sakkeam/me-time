@@ -238,6 +238,8 @@ export class AudioPlayer {
   private isPlaying: boolean = false;
   private onStateChange: (isPlaying: boolean) => void;
   private sourceNodes: AudioBufferSourceNode[] = [];
+  private analyser: AnalyserNode | null = null;
+  private dataArray: Uint8Array | null = null;
 
   constructor(onStateChange: (isPlaying: boolean) => void) {
     this.onStateChange = onStateChange;
@@ -247,6 +249,13 @@ export class AudioPlayer {
     if (!this.audioContext) {
       this.audioContext = new AudioContext();
       this.nextStartTime = this.audioContext.currentTime;
+      
+      // Create analyser for lip sync
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 256;
+      this.analyser.smoothingTimeConstant = 0.8;
+      this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+      this.analyser.connect(this.audioContext.destination);
     }
 
     // Resume context if suspended (browser policy)
@@ -273,7 +282,13 @@ export class AudioPlayer {
 
     const source = this.audioContext.createBufferSource();
     source.buffer = audioBuffer;
-    source.connect(this.audioContext.destination);
+    
+    // Connect through analyser for lip sync
+    if (this.analyser) {
+      source.connect(this.analyser);
+    } else {
+      source.connect(this.audioContext.destination);
+    }
 
     const startTime = Math.max(this.audioContext.currentTime, this.nextStartTime);
     source.start(startTime);
@@ -293,6 +308,27 @@ export class AudioPlayer {
         this.onStateChange(false);
       }
     };
+  }
+
+  /**
+   * Get current audio volume for lip sync (0.0 to 1.0)
+   */
+  getVolume(): number {
+    if (!this.analyser || !this.dataArray || !this.isPlaying) {
+      return 0;
+    }
+
+    this.analyser.getByteFrequencyData(this.dataArray);
+    
+    // Calculate average amplitude
+    let sum = 0;
+    for (let i = 0; i < this.dataArray.length; i++) {
+      sum += this.dataArray[i];
+    }
+    const average = sum / this.dataArray.length;
+    
+    // Normalize to 0.0-1.0 range (with some amplification for visibility)
+    return Math.min(1.0, (average / 255.0) * 2.5);
   }
 
   async pause() {
@@ -334,5 +370,7 @@ export class AudioPlayer {
       this.audioContext.close();
       this.audioContext = null;
     }
+    this.analyser = null;
+    this.dataArray = null;
   }
 }

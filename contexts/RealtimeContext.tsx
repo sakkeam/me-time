@@ -23,6 +23,7 @@ interface RealtimeContextType {
   interruptAudio: () => void;
   pauseAudio: () => void;
   resumeAudio: () => void;
+  mouthOpenAmount: number;
 }
 
 interface TranscriptionItem {
@@ -55,6 +56,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const [selectedVoice, setSelectedVoiceState] = useState<string>('alloy');
   const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
   const [isAudioPaused, setIsAudioPaused] = useState(false);
+  const [mouthOpenAmount, setMouthOpenAmount] = useState(0);
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
@@ -94,6 +96,23 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     audioPlayerRef.current?.resume();
     setIsAudioPaused(false);
   }, []);
+
+  // Add effect to update mouth open amount based on audio volume
+  useEffect(() => {
+    if (!isAssistantSpeaking || isAudioPaused) {
+      setMouthOpenAmount(0);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      if (audioPlayerRef.current) {
+        const volume = audioPlayerRef.current.getVolume();
+        setMouthOpenAmount(volume);
+      }
+    }, 1000 / 30); // Update at 30fps
+
+    return () => clearInterval(intervalId);
+  }, [isAssistantSpeaking, isAudioPaused]);
 
   // Load saved voice preference
   useEffect(() => {
@@ -461,7 +480,8 @@ Available expressions:
         isAudioPaused,
         interruptAudio,
         pauseAudio,
-        resumeAudio
+        resumeAudio,
+        mouthOpenAmount
       }}
     >
       {children}
