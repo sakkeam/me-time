@@ -19,6 +19,7 @@ import PerlinOcean, { WaveParams } from '@/components/PerlinOcean'
 import PerlinCelestialBody from '@/components/PerlinCelestialBody'
 import PerlinTree from '@/components/PerlinTree'
 import PerlinGrass from '@/components/PerlinGrass'
+import PerlinFlower from '@/components/PerlinFlower'
 import PerformanceMonitor from '@/components/PerformanceMonitor'
 import * as THREE from 'three'
 
@@ -82,6 +83,16 @@ export default function Home() {
   const [grassUseCrossQuad, setGrassUseCrossQuad] = useState(true)
   const [grassEnableShadows, setGrassEnableShadows] = useState(false)
   const [grassDebug, setGrassDebug] = useState(false)
+
+  // Flower Settings
+  const [flowerDensity, setFlowerDensity] = useState(1.0)
+  const [flowerThreshold, setFlowerThreshold] = useState(0.2)
+  const [flowerWindStrength, setFlowerWindStrength] = useState(0.3)
+  const [flowerWindDirection, setFlowerWindDirection] = useState<[number, number]>([1, 0.5])
+  const [flowerPetalCount, setFlowerPetalCount] = useState(5)
+  const [flowerSeedOffset, setFlowerSeedOffset] = useState(2000)
+  const [flowerEnableShadows, setFlowerEnableShadows] = useState(false)
+  const [flowerDebug, setFlowerDebug] = useState(false)
 
   const setSkyPreset = (preset: 'clear' | 'sunny' | 'cloudy') => {
     switch (preset) {
@@ -200,6 +211,20 @@ export default function Home() {
                   enableShadows={grassEnableShadows}
                   debug={grassDebug}
                 />
+                <PerlinFlower 
+                  terrainHeightMap={terrainHeightMap}
+                  terrainSize={terrainSize}
+                  terrainPosition={[0, -2, 0]}
+                  density={flowerDensity}
+                  threshold={flowerThreshold}
+                  oceanLevel={-0.8}
+                  baseWindStrength={flowerWindStrength}
+                  windDirection={flowerWindDirection}
+                  seedOffset={flowerSeedOffset}
+                  petalCount={flowerPetalCount}
+                  enableShadows={flowerEnableShadows}
+                  debug={flowerDebug}
+                />
                 <PerlinOcean 
                   waves={oceanWaves}
                   terrainHeightMap={terrainHeightMap}
@@ -291,6 +316,22 @@ export default function Home() {
                 setUseCrossQuad: setGrassUseCrossQuad,
                 enableShadows: grassEnableShadows,
                 setEnableShadows: setGrassEnableShadows
+              }}
+              flowerSettings={{
+                density: flowerDensity,
+                setDensity: setFlowerDensity,
+                threshold: flowerThreshold,
+                setThreshold: setFlowerThreshold,
+                windStrength: flowerWindStrength,
+                setWindStrength: setFlowerWindStrength,
+                windDirection: flowerWindDirection,
+                setWindDirection: setFlowerWindDirection,
+                petalCount: flowerPetalCount,
+                setPetalCount: setFlowerPetalCount,
+                seedOffset: flowerSeedOffset,
+                setSeedOffset: setFlowerSeedOffset,
+                enableShadows: flowerEnableShadows,
+                setEnableShadows: setFlowerEnableShadows
               }}
             />
             <TranscriptionDisplay />

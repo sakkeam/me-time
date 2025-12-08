@@ -5,6 +5,7 @@ import { useFaceTracking } from '@/contexts/FaceTrackingContext';
 import { WaveParams } from '@/components/PerlinOcean';
 import TreePreview from './TreePreview';
 import GrassPreview from './GrassPreview';
+import FlowerPreview from './FlowerPreview';
 
 interface DebugPanelProps {
   terrainSettings?: {
@@ -80,9 +81,25 @@ interface DebugPanelProps {
     enableShadows: boolean
     setEnableShadows: (v: boolean) => void
   }
+  flowerSettings?: {
+    density: number
+    setDensity: (v: number) => void
+    threshold: number
+    setThreshold: (v: number) => void
+    windStrength: number
+    setWindStrength: (v: number) => void
+    windDirection: [number, number]
+    setWindDirection: (v: [number, number]) => void
+    petalCount: number
+    setPetalCount: (v: number) => void
+    seedOffset: number
+    setSeedOffset: (v: number) => void
+    enableShadows: boolean
+    setEnableShadows: (v: boolean) => void
+  }
 }
 
-export default function DebugPanel({ terrainSettings, skySettings, celestialSettings, oceanSettings, treeSettings, grassSettings }: DebugPanelProps) {
+export default function DebugPanel({ terrainSettings, skySettings, celestialSettings, oceanSettings, treeSettings, grassSettings, flowerSettings }: DebugPanelProps) {
   const { 
     yaw, 
     pitch, 
@@ -721,6 +738,87 @@ export default function DebugPanel({ terrainSettings, skySettings, celestialSett
                     <span className="text-gray-300 text-xs">Enable Shadows</span>
                   </label>
                 </div>
+              </div>
+            </>
+          )}
+
+          {flowerSettings && (
+            <>
+              <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2 pt-2">
+                <span className="font-bold text-pink-400">Flowers 🌸</span>
+              </div>
+
+              <FlowerPreview 
+                petalCount={flowerSettings.petalCount}
+                windStrength={flowerSettings.windStrength}
+                windDirection={flowerSettings.windDirection}
+              />
+              
+              <div className="space-y-3 mb-4">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Density:</span>
+                    <span>{flowerSettings.density.toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" min="0.1" max="2.0" step="0.1"
+                    value={flowerSettings.density}
+                    onChange={(e) => flowerSettings.setDensity(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Threshold:</span>
+                    <span>{flowerSettings.threshold.toFixed(2)}</span>
+                  </div>
+                  <input 
+                    type="range" min="-0.3" max="0.5" step="0.05"
+                    value={flowerSettings.threshold}
+                    onChange={(e) => flowerSettings.setThreshold(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Wind Strength:</span>
+                    <span>{flowerSettings.windStrength.toFixed(1)}</span>
+                  </div>
+                  <input 
+                    type="range" min="0" max="1.0" step="0.1"
+                    value={flowerSettings.windStrength}
+                    onChange={(e) => flowerSettings.setWindStrength(parseFloat(e.target.value))}
+                    className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Petal Count:</span>
+                    <span>{flowerSettings.petalCount}</span>
+                  </div>
+                  <select 
+                    value={flowerSettings.petalCount}
+                    onChange={(e) => flowerSettings.setPetalCount(parseInt(e.target.value))}
+                    className="w-full bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-600 outline-none"
+                  >
+                    {[4, 5, 6, 7, 8].map(n => (
+                      <option key={n} value={n}>{n} Petals</option>
+                    ))}
+                  </select>
+                </div>
+
+                <label className="flex items-center space-x-2 cursor-pointer mt-2">
+                  <input 
+                    type="checkbox" 
+                    checked={flowerSettings.enableShadows} 
+                    onChange={(e) => flowerSettings.setEnableShadows(e.target.checked)}
+                    className="form-checkbox h-3 w-3 text-pink-500 rounded focus:ring-0 bg-gray-700 border-gray-600"
+                  />
+                  <span className="text-gray-300 text-xs">Enable Shadows</span>
+                </label>
               </div>
             </>
           )}
