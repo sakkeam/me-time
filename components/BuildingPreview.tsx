@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useMemo } from 'react'
+import { Canvas } from '@react-three/fiber'
+import { OrbitControls, Stage } from '@react-three/drei'
 import * as THREE from 'three'
 import { createBuildingGeometry, BUILDING_PRESETS } from '@/lib/buildingGenerator'
 
-export default function BuildingPreview({ type = 'residential' }: { type?: string }) {
+function BuildingModel({ type }: { type: string }) {
   const geometry = useMemo(() => {
     // @ts-ignore
     const preset = BUILDING_PRESETS[type] || BUILDING_PRESETS.residential;
@@ -28,5 +30,21 @@ export default function BuildingPreview({ type = 'residential' }: { type?: strin
     <mesh geometry={geometry}>
       <meshStandardMaterial vertexColors />
     </mesh>
+  )
+}
+
+export default function BuildingPreview({ type = 'residential' }: { type?: string }) {
+  return (
+    <div className="w-full h-full relative">
+      <div className="absolute top-2 left-2 z-10 text-[10px] text-gray-400 bg-black/50 px-2 py-1 rounded pointer-events-none">
+        Preview: {type}
+      </div>
+      <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 10, 20], fov: 50 }}>
+        <Stage environment="city" intensity={0.5} adjustCamera={true}>
+          <BuildingModel type={type} />
+        </Stage>
+        <OrbitControls autoRotate autoRotateSpeed={2} makeDefault />
+      </Canvas>
+    </div>
   )
 }

@@ -97,6 +97,9 @@ export default function Home() {
   const [flowerEnableShadows, setFlowerEnableShadows] = useState(false)
   const [flowerDebug, setFlowerDebug] = useState(false)
 
+  // Building Settings
+  const [buildingSeed, setBuildingSeed] = useState(12345)
+
   const setSkyPreset = (preset: 'clear' | 'sunny' | 'cloudy') => {
     switch (preset) {
       case 'clear':
@@ -198,6 +201,7 @@ export default function Home() {
                     terrainHeightMap={terrainHeightMap}
                     terrainSize={terrainSize}
                     terrainPosition={[0, -2, 0]}
+                    seed={buildingSeed}
                   />
                 </RoadContextProvider>
                 <PerlinTree 
@@ -347,6 +351,10 @@ export default function Home() {
                 setSeedOffset: setFlowerSeedOffset,
                 enableShadows: flowerEnableShadows,
                 setEnableShadows: setFlowerEnableShadows
+              }}
+              buildingSettings={{
+                seed: buildingSeed,
+                setSeed: setBuildingSeed
               }}
             />
             <TranscriptionDisplay />

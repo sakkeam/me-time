@@ -6,6 +6,7 @@ import { WaveParams } from '@/components/PerlinOcean';
 import TreePreview from './TreePreview';
 import GrassPreview from './GrassPreview';
 import FlowerPreview from './FlowerPreview';
+import BuildingPreview from './BuildingPreview';
 
 interface DebugPanelProps {
   terrainSettings?: {
@@ -97,9 +98,13 @@ interface DebugPanelProps {
     enableShadows: boolean
     setEnableShadows: (v: boolean) => void
   }
+  buildingSettings?: {
+    seed: number
+    setSeed: (v: number) => void
+  }
 }
 
-export default function DebugPanel({ terrainSettings, skySettings, celestialSettings, oceanSettings, treeSettings, grassSettings, flowerSettings }: DebugPanelProps) {
+export default function DebugPanel({ terrainSettings, skySettings, celestialSettings, oceanSettings, treeSettings, grassSettings, flowerSettings, buildingSettings }: DebugPanelProps) {
   const { 
     yaw, 
     pitch, 
@@ -115,6 +120,7 @@ export default function DebugPanel({ terrainSettings, skySettings, celestialSett
 
   const [expandedWave, setExpandedWave] = useState<number | null>(null);
   const [previewType, setPreviewType] = useState<string>('conifer');
+  const [buildingPreviewType, setBuildingPreviewType] = useState<string>('residential');
 
   const updateWave = (index: number, field: keyof WaveParams, value: number | number[]) => {
     if (!oceanSettings) return;
@@ -819,6 +825,47 @@ export default function DebugPanel({ terrainSettings, skySettings, celestialSett
                   />
                   <span className="text-gray-300 text-xs">Enable Shadows</span>
                 </label>
+              </div>
+            </>
+          )}
+
+          {buildingSettings && (
+            <>
+              <div className="flex justify-between items-center mb-2 border-b border-gray-700 pb-2 pt-2">
+                <span className="font-bold text-orange-400">Buildings 🏢</span>
+              </div>
+
+              <div className="h-48 w-full bg-gray-800 rounded mb-3 overflow-hidden relative border border-gray-700">
+                 {/* BuildingPreview component handles its own Canvas */}
+                 <BuildingPreview type={buildingPreviewType} />
+              </div>
+              
+              <div className="flex justify-between items-center mb-3">
+                 <span className="text-gray-400 text-xs">Type:</span>
+                 <select 
+                   value={buildingPreviewType} 
+                   onChange={(e) => setBuildingPreviewType(e.target.value)}
+                   className="bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-600 outline-none capitalize"
+                 >
+                   {['residential', 'commercial', 'office', 'industrial', 'skyscraper'].map(t => (
+                     <option key={t} value={t}>{t}</option>
+                   ))}
+                 </select>
+              </div>
+
+              <div className="space-y-3 mb-4">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-400">Seed:</span>
+                    <span>{buildingSettings.seed}</span>
+                  </div>
+                  <input 
+                    type="number"
+                    value={buildingSettings.seed}
+                    onChange={(e) => buildingSettings.setSeed(parseInt(e.target.value))}
+                    className="w-full bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-600"
+                  />
+                </div>
               </div>
             </>
           )}
