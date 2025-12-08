@@ -253,14 +253,8 @@ export default function VRMViewer() {
         // So we subtract depthChange from current offset
         const targetZOffset = currentCameraZOffset.current - (depthChange * CAMERA_MOVE_SPEED);
         
-        // Clamp range
-        // Initial camera is at 1.5. 
-        // Min distance 0.5 (too close), Max distance 5.0
-        const newTotalZ = 1.5 + targetZOffset;
-        
-        if (newTotalZ >= 0.5 && newTotalZ <= 5.0) {
-           currentCameraZOffset.current = targetZOffset;
-        }
+        // No clamp range - allow infinite movement
+        currentCameraZOffset.current = targetZOffset;
       }
     }
 
