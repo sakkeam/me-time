@@ -207,7 +207,7 @@ export default function FaceTracking() {
             const rawCursorPos = calculateStableCursorPosition(handLandmarks, video.videoWidth, video.videoHeight);
             
             // Detect pinch gesture
-            const isPinching = detectPinch(handLandmarks, 0.04);
+            const isPinching = detectPinch(handLandmarks, 0.08);
             const currentTime = performance.now();
 
             // Update appropriate hand state

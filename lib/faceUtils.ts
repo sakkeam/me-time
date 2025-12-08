@@ -169,7 +169,7 @@ export function calculateLandmarkDistance(
  * Detect pinch gesture (thumb tip to index finger tip)
  * Returns true if pinching
  */
-export function detectPinch(landmarks: NormalizedLandmark[], threshold: number = 0.04): boolean {
+export function detectPinch(landmarks: NormalizedLandmark[], threshold: number = 0.08): boolean {
   // Thumb tip is landmark 4
   // Index finger tip is landmark 8
   const thumbTip = landmarks[4];
@@ -188,7 +188,7 @@ export function detectLongPinch(
   landmarks: NormalizedLandmark[],
   pinchStartTime: number | null,
   currentTime: number,
-  threshold: number = 0.04,
+  threshold: number = 0.08,
   duration: number = 0.5
 ): { isLongPinch: boolean; pinchDuration: number } {
   const isPinching = detectPinch(landmarks, threshold);
