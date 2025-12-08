@@ -32,6 +32,7 @@ export default function TranscriptionDisplay() {
   const previewPlayerRef = useRef<VoicePreviewPlayer | null>(null);
 
   const [morphemeTokens, setMorphemeTokens] = useState<MorphemeToken[]>([]);
+  const [userMorphemeTokens, setUserMorphemeTokens] = useState<MorphemeToken[]>([]);
   const [kagomeReady, setKagomeReady] = useState(false);
 
   // Initialize kagome WASM
@@ -95,6 +96,25 @@ export default function TranscriptionDisplay() {
   // Get the text to display for user input
   const userDisplayText = currentDelta || transcriptionItems[transcriptionItems.length - 1]?.text;
   
+  // Tokenize user input with debounce
+  useEffect(() => {
+    if (!kagomeReady || !userDisplayText) {
+      setUserMorphemeTokens([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      try {
+        const tokens = kagome.tokenize(userDisplayText);
+        setUserMorphemeTokens(tokens);
+      } catch (error) {
+        console.error('User tokenization failed:', error);
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [userDisplayText, kagomeReady]);
+
   return (
     <>
       {/* Assistant Response - Top of Screen */}
@@ -215,7 +235,11 @@ export default function TranscriptionDisplay() {
           {userDisplayText && (
             <div className="bg-black/60 backdrop-blur-md rounded-full px-8 py-3 text-white shadow-2xl transition-all text-center max-w-full">
               <p className={`text-xl font-medium truncate ${currentDelta ? 'text-blue-200 animate-pulse' : 'text-white/90'}`}>
-                {userDisplayText}
+                {kagomeReady && userMorphemeTokens.length > 0 ? (
+                  <MorphemeDisplay tokens={userMorphemeTokens} />
+                ) : (
+                  userDisplayText
+                )}
               </p>
             </div>
           )}
