@@ -54,4 +54,5 @@ export const ANIMATION_REGISTRY: Record<string, AnimationDefinition> = {
   prone_idle: { file: "CQ_ProneIDLE.vrma", name: "prone_idle", category: "poses", tags: ["prone", "sleep"], description: "Lying prone idle", loop: true },
   pose_1: { file: "001_motion_pose.vrma", name: "pose_1", category: "poses", tags: ["pose"], description: "Generic pose 1", loop: true },
   pose_2: { file: "pose_30ko.vrma", name: "pose_2", category: "poses", tags: ["pose"], description: "Generic pose 2", loop: true },
+  folded_hands: { file: "Folded_Hands.vrma", name: "folded_hands", category: "poses", tags: ["folded", "hands", "pray", "wait"], description: "Folded hands pose", loop: true },
 };
