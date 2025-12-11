@@ -25,6 +25,7 @@ import PerlinBuilding from '@/components/PerlinBuilding'
 import { RoadContextProvider } from '@/contexts/RoadContext'
 import PerformanceMonitor from '@/components/PerformanceMonitor'
 import * as THREE from 'three'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 
 function Loader() {
   const { progress } = useProgress()
@@ -157,211 +158,213 @@ export default function Home() {
   }
 
   return (
-    <FaceTrackingProvider>
-      <AnimationProvider>
-        <RealtimeProvider>
-          <div className="h-screen w-full bg-zinc-50 dark:bg-black relative">
-            <ErrorBoundary>
-              <Canvas
-                camera={{ position: [0, 1.4, 1.5], fov: 40 }}
-                // Camera lookAt is now handled in VRMViewer via useFrame
-              >
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[1, 1, 1]} intensity={1} />
-                <PerformanceMonitor />
-                <PerlinBackground 
-                  cloudDensity={cloudDensity}
-                  cloudCoverage={cloudCoverage}
-                  cloudSpeed={cloudSpeed}
-                  noiseOctaves={noiseOctaves}
-                />
-                <PerlinCelestialBody
-                  size={celestialSize}
-                  position={celestialPosition}
-                  sunIntensity={sunIntensity}
-                  moonIntensity={moonIntensity}
-                />
-                <PerlinTerrain 
-                  scale={terrainScale} 
-                  amplitude={terrainAmplitude} 
-                  octaves={terrainOctaves} 
-                  debug={terrainDebug}
-                  onHeightTextureReady={(tex, size) => {
-                    setTerrainHeightMap(tex)
-                    setTerrainSize(size)
-                  }}
-                />
-                <RoadContextProvider>
-                  <PerlinRoad 
+    <ThemeProvider>
+      <FaceTrackingProvider>
+        <AnimationProvider>
+          <RealtimeProvider>
+            <div className="h-screen w-full bg-zinc-50 dark:bg-black relative">
+              <ErrorBoundary>
+                <Canvas
+                  camera={{ position: [0, 1.4, 1.5], fov: 40 }}
+                  // Camera lookAt is now handled in VRMViewer via useFrame
+                >
+                  <ambientLight intensity={0.5} />
+                  <directionalLight position={[1, 1, 1]} intensity={1} />
+                  <PerformanceMonitor />
+                  <PerlinBackground 
+                    cloudDensity={cloudDensity}
+                    cloudCoverage={cloudCoverage}
+                    cloudSpeed={cloudSpeed}
+                    noiseOctaves={noiseOctaves}
+                  />
+                  <PerlinCelestialBody
+                    size={celestialSize}
+                    position={celestialPosition}
+                    sunIntensity={sunIntensity}
+                    moonIntensity={moonIntensity}
+                  />
+                  <PerlinTerrain 
+                    scale={terrainScale} 
+                    amplitude={terrainAmplitude} 
+                    octaves={terrainOctaves} 
+                    debug={terrainDebug}
+                    onHeightTextureReady={(tex, size) => {
+                      setTerrainHeightMap(tex)
+                      setTerrainSize(size)
+                    }}
+                  />
+                  <RoadContextProvider>
+                    <PerlinRoad 
+                      terrainHeightMap={terrainHeightMap}
+                      terrainSize={terrainSize}
+                      terrainPosition={[0, -2, 0]}
+                    />
+                    <PerlinBuilding 
+                      terrainHeightMap={terrainHeightMap}
+                      terrainSize={terrainSize}
+                      terrainPosition={[0, -2, 0]}
+                      seed={buildingSeed}
+                    />
+                  </RoadContextProvider>
+                  <PerlinTree 
                     terrainHeightMap={terrainHeightMap}
                     terrainSize={terrainSize}
                     terrainPosition={[0, -2, 0]}
+                    density={treeDensity}
+                    sizeRange={treeSizeRange}
+                    varieties={treeVarieties}
+                    seed={treeSeed}
+                    windStrength={treeWindStrength}
+                    debug={treeDebug}
+                    onProgress={setTreeLoadingProgress}
                   />
-                  <PerlinBuilding 
+                  <PerlinGrass 
                     terrainHeightMap={terrainHeightMap}
                     terrainSize={terrainSize}
                     terrainPosition={[0, -2, 0]}
-                    seed={buildingSeed}
+                    density={grassDensity}
+                    threshold={grassThreshold}
+                    oceanLevel={-0.8}
+                    baseWindStrength={grassWindStrength}
+                    windDirection={grassWindDirection}
+                    seedOffset={grassSeedOffset}
+                    useCrossQuad={grassUseCrossQuad}
+                    enableShadows={grassEnableShadows}
+                    debug={grassDebug}
                   />
-                </RoadContextProvider>
-                <PerlinTree 
-                  terrainHeightMap={terrainHeightMap}
-                  terrainSize={terrainSize}
-                  terrainPosition={[0, -2, 0]}
-                  density={treeDensity}
-                  sizeRange={treeSizeRange}
-                  varieties={treeVarieties}
-                  seed={treeSeed}
-                  windStrength={treeWindStrength}
-                  debug={treeDebug}
-                  onProgress={setTreeLoadingProgress}
-                />
-                <PerlinGrass 
-                  terrainHeightMap={terrainHeightMap}
-                  terrainSize={terrainSize}
-                  terrainPosition={[0, -2, 0]}
-                  density={grassDensity}
-                  threshold={grassThreshold}
-                  oceanLevel={-0.8}
-                  baseWindStrength={grassWindStrength}
-                  windDirection={grassWindDirection}
-                  seedOffset={grassSeedOffset}
-                  useCrossQuad={grassUseCrossQuad}
-                  enableShadows={grassEnableShadows}
-                  debug={grassDebug}
-                />
-                <PerlinFlower 
-                  terrainHeightMap={terrainHeightMap}
-                  terrainSize={terrainSize}
-                  terrainPosition={[0, -2, 0]}
-                  density={flowerDensity}
-                  threshold={flowerThreshold}
-                  oceanLevel={-0.8}
-                  baseWindStrength={flowerWindStrength}
-                  windDirection={flowerWindDirection}
-                  seedOffset={flowerSeedOffset}
-                  petalCount={flowerPetalCount}
-                  enableShadows={flowerEnableShadows}
-                  debug={flowerDebug}
-                />
-                <PerlinOcean 
-                  waves={oceanWaves}
-                  terrainHeightMap={terrainHeightMap}
-                  terrainSize={terrainSize}
-                  terrainPosition={[0, -2, 0]}
-                  opacity={oceanOpacity}
-                  foamThreshold={oceanFoamThreshold}
-                  debug={oceanDebug}
-                />
-                <Suspense fallback={<Loader />}>
-                  <VRMViewer />
-                </Suspense>
-              </Canvas>
-            </ErrorBoundary>
-            
-            {/* Face Tracking Components */}
-            <FaceTracking />
-            <VirtualCursor />
-            <DebugPanel 
-              terrainSettings={{
-                scale: terrainScale,
-                setScale: setTerrainScale,
-                amplitude: terrainAmplitude,
-                setAmplitude: setTerrainAmplitude,
-                octaves: terrainOctaves,
-                setOctaves: setTerrainOctaves,
-                debug: terrainDebug,
-                setDebug: setTerrainDebug
-              }}
-              skySettings={{
-                cloudDensity,
-                setCloudDensity,
-                cloudCoverage,
-                setCloudCoverage,
-                cloudSpeed,
-                setCloudSpeed,
-                noiseOctaves,
-                setNoiseOctaves,
-                setPreset: setSkyPreset
-              }}
-              celestialSettings={{
-                size: celestialSize,
-                setSize: setCelestialSize,
-                position: celestialPosition,
-                setPosition: setCelestialPosition,
-                sunIntensity,
-                setSunIntensity,
-                moonIntensity,
-                setMoonIntensity
-              }}
-              oceanSettings={{
-                waves: oceanWaves,
-                setWaves: setOceanWaves,
-                opacity: oceanOpacity,
-                setOpacity: setOceanOpacity,
-                foamThreshold: oceanFoamThreshold,
-                setFoamThreshold: setOceanFoamThreshold,
-                setPreset: setOceanPreset,
-                debug: oceanDebug,
-                setDebug: setOceanDebug
-              }}
-              treeSettings={{
-                density: treeDensity,
-                setDensity: setTreeDensity,
-                sizeRange: treeSizeRange,
-                setSizeRange: setTreeSizeRange,
-                varieties: treeVarieties,
-                setVarieties: setTreeVarieties,
-                seed: treeSeed,
-                setSeed: setTreeSeed,
-                windStrength: treeWindStrength,
-                setWindStrength: setTreeWindStrength,
-                debug: treeDebug,
-                setDebug: setTreeDebug,
-                loadingProgress: treeLoadingProgress
-              }}
-              grassSettings={{
-                density: grassDensity,
-                setDensity: setGrassDensity,
-                threshold: grassThreshold,
-                setThreshold: setGrassThreshold,
-                windStrength: grassWindStrength,
-                setWindStrength: setGrassWindStrength,
-                windDirection: grassWindDirection,
-                setWindDirection: setGrassWindDirection,
-                seedOffset: grassSeedOffset,
-                setSeedOffset: setGrassSeedOffset,
-                useCrossQuad: grassUseCrossQuad,
-                setUseCrossQuad: setGrassUseCrossQuad,
-                enableShadows: grassEnableShadows,
-                setEnableShadows: setGrassEnableShadows
-              }}
-              flowerSettings={{
-                density: flowerDensity,
-                setDensity: setFlowerDensity,
-                threshold: flowerThreshold,
-                setThreshold: setFlowerThreshold,
-                windStrength: flowerWindStrength,
-                setWindStrength: setFlowerWindStrength,
-                windDirection: flowerWindDirection,
-                setWindDirection: setFlowerWindDirection,
-                petalCount: flowerPetalCount,
-                setPetalCount: setFlowerPetalCount,
-                seedOffset: flowerSeedOffset,
-                setSeedOffset: setFlowerSeedOffset,
-                enableShadows: flowerEnableShadows,
-                setEnableShadows: setFlowerEnableShadows
-              }}
-              buildingSettings={{
-                seed: buildingSeed,
-                setSeed: setBuildingSeed
-              }}
-            />
-            <TranscriptionDisplay />
-            <AnimationDebug />
-          </div>
-        </RealtimeProvider>
-      </AnimationProvider>
-    </FaceTrackingProvider>
+                  <PerlinFlower 
+                    terrainHeightMap={terrainHeightMap}
+                    terrainSize={terrainSize}
+                    terrainPosition={[0, -2, 0]}
+                    density={flowerDensity}
+                    threshold={flowerThreshold}
+                    oceanLevel={-0.8}
+                    baseWindStrength={flowerWindStrength}
+                    windDirection={flowerWindDirection}
+                    seedOffset={flowerSeedOffset}
+                    petalCount={flowerPetalCount}
+                    enableShadows={flowerEnableShadows}
+                    debug={flowerDebug}
+                  />
+                  <PerlinOcean 
+                    waves={oceanWaves}
+                    terrainHeightMap={terrainHeightMap}
+                    terrainSize={terrainSize}
+                    terrainPosition={[0, -2, 0]}
+                    opacity={oceanOpacity}
+                    foamThreshold={oceanFoamThreshold}
+                    debug={oceanDebug}
+                  />
+                  <Suspense fallback={<Loader />}>
+                    <VRMViewer />
+                  </Suspense>
+                </Canvas>
+              </ErrorBoundary>
+              
+              {/* Face Tracking Components */}
+              <FaceTracking />
+              <VirtualCursor />
+              <DebugPanel 
+                terrainSettings={{
+                  scale: terrainScale,
+                  setScale: setTerrainScale,
+                  amplitude: terrainAmplitude,
+                  setAmplitude: setTerrainAmplitude,
+                  octaves: terrainOctaves,
+                  setOctaves: setTerrainOctaves,
+                  debug: terrainDebug,
+                  setDebug: setTerrainDebug
+                }}
+                skySettings={{
+                  cloudDensity,
+                  setCloudDensity,
+                  cloudCoverage,
+                  setCloudCoverage,
+                  cloudSpeed,
+                  setCloudSpeed,
+                  noiseOctaves,
+                  setNoiseOctaves,
+                  setPreset: setSkyPreset
+                }}
+                celestialSettings={{
+                  size: celestialSize,
+                  setSize: setCelestialSize,
+                  position: celestialPosition,
+                  setPosition: setCelestialPosition,
+                  sunIntensity,
+                  setSunIntensity,
+                  moonIntensity,
+                  setMoonIntensity
+                }}
+                oceanSettings={{
+                  waves: oceanWaves,
+                  setWaves: setOceanWaves,
+                  opacity: oceanOpacity,
+                  setOpacity: setOceanOpacity,
+                  foamThreshold: oceanFoamThreshold,
+                  setFoamThreshold: setOceanFoamThreshold,
+                  setPreset: setOceanPreset,
+                  debug: oceanDebug,
+                  setDebug: setOceanDebug
+                }}
+                treeSettings={{
+                  density: treeDensity,
+                  setDensity: setTreeDensity,
+                  sizeRange: treeSizeRange,
+                  setSizeRange: setTreeSizeRange,
+                  varieties: treeVarieties,
+                  setVarieties: setTreeVarieties,
+                  seed: treeSeed,
+                  setSeed: setTreeSeed,
+                  windStrength: treeWindStrength,
+                  setWindStrength: setTreeWindStrength,
+                  debug: treeDebug,
+                  setDebug: setTreeDebug,
+                  loadingProgress: treeLoadingProgress
+                }}
+                grassSettings={{
+                  density: grassDensity,
+                  setDensity: setGrassDensity,
+                  threshold: grassThreshold,
+                  setThreshold: setGrassThreshold,
+                  windStrength: grassWindStrength,
+                  setWindStrength: setGrassWindStrength,
+                  windDirection: grassWindDirection,
+                  setWindDirection: setGrassWindDirection,
+                  seedOffset: grassSeedOffset,
+                  setSeedOffset: setGrassSeedOffset,
+                  useCrossQuad: grassUseCrossQuad,
+                  setUseCrossQuad: setGrassUseCrossQuad,
+                  enableShadows: grassEnableShadows,
+                  setEnableShadows: setGrassEnableShadows
+                }}
+                flowerSettings={{
+                  density: flowerDensity,
+                  setDensity: setFlowerDensity,
+                  threshold: flowerThreshold,
+                  setThreshold: setFlowerThreshold,
+                  windStrength: flowerWindStrength,
+                  setWindStrength: setFlowerWindStrength,
+                  windDirection: flowerWindDirection,
+                  setWindDirection: setFlowerWindDirection,
+                  petalCount: flowerPetalCount,
+                  setPetalCount: setFlowerPetalCount,
+                  seedOffset: flowerSeedOffset,
+                  setSeedOffset: setFlowerSeedOffset,
+                  enableShadows: flowerEnableShadows,
+                  setEnableShadows: setFlowerEnableShadows
+                }}
+                buildingSettings={{
+                  seed: buildingSeed,
+                  setSeed: setBuildingSeed
+                }}
+              />
+              <TranscriptionDisplay />
+              <AnimationDebug />
+            </div>
+          </RealtimeProvider>
+        </AnimationProvider>
+      </FaceTrackingProvider>
+    </ThemeProvider>
   )
 }
