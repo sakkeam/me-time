@@ -3,6 +3,7 @@
 import { useRef, useMemo, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface PerlinBackgroundProps {
   cloudDensity?: number
@@ -175,6 +176,7 @@ export default function PerlinBackground({
   noiseOctaves = 3
 }: PerlinBackgroundProps) {
   const mesh = useRef<THREE.Mesh>(null)
+  const { resolvedTheme } = useTheme()
   
   const uniforms = useMemo(
     () => ({
@@ -197,16 +199,8 @@ export default function PerlinBackground({
   }, [cloudDensity, cloudCoverage, cloudSpeed, noiseOctaves, uniforms])
 
   useEffect(() => {
-    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    uniforms.uTheme.value = darkModeQuery.matches ? 1 : 0
-
-    const handler = (e: MediaQueryListEvent) => {
-      uniforms.uTheme.value = e.matches ? 1 : 0
-    }
-    
-    darkModeQuery.addEventListener('change', handler)
-    return () => darkModeQuery.removeEventListener('change', handler)
-  }, [uniforms])
+    uniforms.uTheme.value = resolvedTheme === 'dark' ? 1 : 0
+  }, [resolvedTheme, uniforms])
 
   useFrame((state) => {
     if (mesh.current) {

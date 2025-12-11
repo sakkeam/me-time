@@ -3,6 +3,7 @@
 import { useRef, useMemo, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useTheme } from '@/contexts/ThemeContext'
 
 export interface WaveParams {
   amplitude: number
@@ -396,6 +397,7 @@ export default function PerlinOcean({
   debug = false
 }: PerlinOceanProps) {
   const { camera } = useThree()
+  const { resolvedTheme } = useTheme()
   const [lodLevel, setLodLevel] = useState<number>(0) // 0: High, 1: Mid, 2: Low
   
   const highResRef = useRef<THREE.Mesh>(null)
@@ -428,16 +430,8 @@ export default function PerlinOcean({
 
   // Theme handling
   useEffect(() => {
-    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    uniforms.uTheme.value = darkModeQuery.matches ? 1 : 0
-
-    const handler = (e: MediaQueryListEvent) => {
-      uniforms.uTheme.value = e.matches ? 1 : 0
-    }
-    
-    darkModeQuery.addEventListener('change', handler)
-    return () => darkModeQuery.removeEventListener('change', handler)
-  }, [uniforms])
+    uniforms.uTheme.value = resolvedTheme === 'dark' ? 1 : 0
+  }, [resolvedTheme, uniforms])
 
   useFrame((state) => {
     uniforms.uTime.value = state.clock.getElapsedTime()

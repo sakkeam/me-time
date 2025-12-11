@@ -3,6 +3,7 @@
 import { useRef, useMemo, useState, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useTheme } from '@/contexts/ThemeContext'
 
 // Simplex 3D Noise by Ian McEwan, Ashima Arts
 const noiseFunctions = `
@@ -315,6 +316,7 @@ export default function PerlinTerrain({
   onHeightTextureReady
 }: PerlinTerrainProps) {
   const { camera } = useThree()
+  const { resolvedTheme } = useTheme()
   const [lodLevel, setLodLevel] = useState<number>(0) // 0: High, 1: Mid, 2: Low
 
   // Refs for meshes
@@ -340,6 +342,19 @@ export default function PerlinTerrain({
     uniforms.uAmplitude.value = amplitude
     uniforms.uOctaves.value = octaves
   }, [scale, amplitude, octaves, uniforms])
+
+  // Update uniforms when theme changes
+  useEffect(() => {
+    if (resolvedTheme === 'dark') {
+      uniforms.uColorLow.value.set('#1a2f0d')
+      uniforms.uColorMid.value.set('#4a3c2a')
+      uniforms.uColorHigh.value.set('#555555')
+    } else {
+      uniforms.uColorLow.value.set('#2d5016')
+      uniforms.uColorMid.value.set('#8b7355')
+      uniforms.uColorHigh.value.set('#e8e8e8')
+    }
+  }, [resolvedTheme, uniforms])
 
   // Texture Generation Logic
   useEffect(() => {

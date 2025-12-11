@@ -5,6 +5,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { GRASS_PRESET } from '@/lib/grassGenerator'
+import { useTheme } from '@/contexts/ThemeContext'
 
 // --- Shaders ---
 
@@ -141,6 +142,7 @@ export default function PerlinGrass({
   debug = false
 }: PerlinGrassProps) {
   const { camera, gl, scene } = useThree()
+  const { resolvedTheme } = useTheme()
   const groupRef = useRef<THREE.Group>(null)
   
   const [worker, setWorker] = useState<Worker | null>(null)
@@ -351,13 +353,14 @@ export default function PerlinGrass({
     
     // Update uniforms
     const windStrength = baseWindStrength * (Math.sin(time * 0.2) * 0.3 + 1.0)
+    const themeValue = resolvedTheme === 'light' ? 1 : 0
     
     Object.values(materialsRef.current).forEach(mat => {
       mat.uniforms.uTime.value = time
       mat.uniforms.uWindStrength.value = windStrength
       mat.uniforms.uWindDirection.value.set(...windDirection)
       mat.uniforms.uCameraPos.value.copy(camPos)
-      // Theme update if needed (passed via props or context? For now assume dark mode default)
+      mat.uniforms.uTheme.value = themeValue
     })
     
     // Update billboard uniforms too (they are cloned materials)
@@ -367,6 +370,7 @@ export default function PerlinGrass({
         chunk.meshLow.material.uniforms.uWindStrength.value = windStrength
         chunk.meshLow.material.uniforms.uWindDirection.value.set(...windDirection)
         chunk.meshLow.material.uniforms.uCameraPos.value.copy(camPos)
+        chunk.meshLow.material.uniforms.uTheme.value = themeValue
       }
     })
 

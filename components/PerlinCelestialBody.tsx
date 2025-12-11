@@ -4,6 +4,7 @@ import { useRef, useMemo, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Sparkles } from '@react-three/drei'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface PerlinCelestialBodyProps {
   size?: number
@@ -157,6 +158,7 @@ export default function PerlinCelestialBody({
   moonIntensity = 0.8
 }: PerlinCelestialBodyProps) {
   const meshRef = useRef<THREE.Mesh>(null)
+  const { resolvedTheme } = useTheme()
   
   const uniforms = useMemo(
     () => ({
@@ -175,16 +177,8 @@ export default function PerlinCelestialBody({
   }, [sunIntensity, moonIntensity, uniforms])
 
   useEffect(() => {
-    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    uniforms.uTheme.value = darkModeQuery.matches ? 1 : 0
-
-    const handler = (e: MediaQueryListEvent) => {
-      uniforms.uTheme.value = e.matches ? 1 : 0
-    }
-    
-    darkModeQuery.addEventListener('change', handler)
-    return () => darkModeQuery.removeEventListener('change', handler)
-  }, [uniforms])
+    uniforms.uTheme.value = resolvedTheme === 'dark' ? 1 : 0
+  }, [resolvedTheme, uniforms])
 
   useFrame((state) => {
     if (meshRef.current) {
@@ -198,16 +192,8 @@ export default function PerlinCelestialBody({
   const [isSun, setIsSun] = useState(true)
   
   useEffect(() => {
-    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    setIsSun(!darkModeQuery.matches)
-
-    const handler = (e: MediaQueryListEvent) => {
-      setIsSun(!e.matches)
-    }
-    
-    darkModeQuery.addEventListener('change', handler)
-    return () => darkModeQuery.removeEventListener('change', handler)
-  }, [])
+    setIsSun(resolvedTheme === 'light')
+  }, [resolvedTheme])
 
   return (
     <group>

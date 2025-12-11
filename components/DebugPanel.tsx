@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState } from 'react';
+import { Sun, Moon, Monitor } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useFaceTracking } from '@/contexts/FaceTrackingContext';
 import { WaveParams } from '@/components/PerlinOcean';
 import TreePreview from './TreePreview';
@@ -105,6 +107,7 @@ interface DebugPanelProps {
 }
 
 export default function DebugPanel({ terrainSettings, skySettings, celestialSettings, oceanSettings, treeSettings, grassSettings, flowerSettings, buildingSettings }: DebugPanelProps) {
+  const { theme, setTheme } = useTheme();
   const { 
     yaw, 
     pitch, 
@@ -131,15 +134,39 @@ export default function DebugPanel({ terrainSettings, skySettings, celestialSett
     oceanSettings.setWaves(newWaves);
   };
 
+  const toggleTheme = () => {
+    if (theme === 'system') setTheme('light');
+    else if (theme === 'light') setTheme('dark');
+    else setTheme('system');
+  };
+
+  const ThemeIcon = () => {
+    switch (theme) {
+      case 'light': return <Sun size={16} />;
+      case 'dark': return <Moon size={16} />;
+      case 'system': return <Monitor size={16} />;
+    }
+  };
+
   return (
     <>
-      {/* Toggle Button - Top Right */}
-      <button
-        onClick={() => setShowDebug(!showDebug)}
-        className="fixed top-4 right-4 z-50 px-4 py-2 bg-gray-800/80 text-white text-sm rounded-full backdrop-blur-sm hover:bg-gray-700 transition-colors border border-gray-600"
-      >
-        {showDebug ? 'Hide Debug' : 'Show Debug'}
-      </button>
+      {/* Top Right Controls */}
+      <div className="fixed top-4 right-4 z-50 flex gap-2">
+        <button
+          onClick={toggleTheme}
+          className="p-2 bg-gray-800/80 text-white rounded-full backdrop-blur-sm hover:bg-gray-700 transition-colors border border-gray-600"
+          aria-label="Toggle theme"
+          title={`Current theme: ${theme}`}
+        >
+          <ThemeIcon />
+        </button>
+        <button
+          onClick={() => setShowDebug(!showDebug)}
+          className="px-4 py-2 bg-gray-800/80 text-white text-sm rounded-full backdrop-blur-sm hover:bg-gray-700 transition-colors border border-gray-600"
+        >
+          {showDebug ? 'Hide Debug' : 'Show Debug'}
+        </button>
+      </div>
 
       {/* Stats Panel - Bottom Right (above video) */}
       {showDebug && (

@@ -5,6 +5,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { FLOWER_COLORS } from '@/lib/flowerGenerator'
+import { useTheme } from '@/contexts/ThemeContext'
 
 // --- Shaders ---
 
@@ -132,6 +133,7 @@ export default function PerlinFlower({
   debug = false
 }: PerlinFlowerProps) {
   const { camera, gl, scene } = useThree()
+  const { resolvedTheme } = useTheme()
   const groupRef = useRef<THREE.Group>(null)
   
   const [worker, setWorker] = useState<Worker | null>(null)
@@ -311,12 +313,14 @@ export default function PerlinFlower({
     
     // Update uniforms
     const windStrength = baseWindStrength * (Math.sin(time * 0.5) * 0.2 + 1.0)
+    const themeValue = resolvedTheme === 'light' ? 1 : 0
     
     materialsRef.current.forEach(mat => {
       mat.uniforms.uTime.value = time
       mat.uniforms.uWindStrength.value = windStrength
       mat.uniforms.uWindDirection.value.set(...windDirection)
       mat.uniforms.uCameraPos.value.copy(camPos)
+      mat.uniforms.uTheme.value = themeValue
     })
 
     if (!loadedInitialChunk) return
