@@ -1,9 +1,21 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { AudioRecorder, AudioPlayer } from '@/lib/audioUtils';
+import { AudioRecorder, AudioPlayer, parseWAVFile, chunkPCMData, arrayBufferToBase64 } from '@/lib/audioUtils';
 import { useAnimation, ANIMATION_REGISTRY } from '@/contexts/AnimationContext';
 import { useFaceTracking } from '@/contexts/FaceTrackingContext';
+
+export type TTSProvider = 'openai' | 'aivisspeech';
+
+export interface AivisSpeaker {
+  name: string;
+  speaker_uuid: string;
+  styles: {
+    name: string;
+    id: number;
+  }[];
+  version: string;
+}
 
 interface RealtimeContextType {
   isConnected: boolean;
@@ -24,6 +36,13 @@ interface RealtimeContextType {
   pauseAudio: () => void;
   resumeAudio: () => void;
   mouthOpenAmount: number;
+  provider: TTSProvider;
+  setProvider: (provider: TTSProvider) => void;
+  aivisSpeaker: number;
+  setAivisSpeaker: (styleId: number) => void;
+  aivisSpeakersList: AivisSpeaker[];
+  isAivisSpeechAvailable: boolean;
+  isSynthesizing: boolean;
 }
 
 interface TranscriptionItem {
@@ -54,11 +73,25 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const [currentAssistantDelta, setCurrentAssistantDelta] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [selectedVoice, setSelectedVoiceState] = useState<string>('alloy');
-  const [isAssistantSpeaking, setIsAssistantSpeaking] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isAudioPaused, setIsAudioPaused] = useState(false);
   const [mouthOpenAmount, setMouthOpenAmount] = useState(0);
+  
+  const [provider, setProviderState] = useState<TTSProvider>('openai');
+  const [aivisSpeaker, setAivisSpeakerState] = useState<number>(888753760); // Default style ID
+  const [aivisSpeakersList, setAivisSpeakersList] = useState<AivisSpeaker[]>([]);
+  const [isAivisSpeechAvailable, setIsAivisSpeechAvailable] = useState(false);
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+  
+  const isAssistantSpeaking = isAudioPlaying || isSynthesizing;
 
   const wsRef = useRef<WebSocket | null>(null);
+  const aivisSpeakerRef = useRef(aivisSpeaker);
+
+  useEffect(() => {
+    aivisSpeakerRef.current = aivisSpeaker;
+  }, [aivisSpeaker]);
+
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
   const audioPlayerRef = useRef<AudioPlayer | null>(null);
   const currentItemIdRef = useRef<string | null>(null);
@@ -70,7 +103,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   // Initialize audio player
   useEffect(() => {
     audioPlayerRef.current = new AudioPlayer((isPlaying) => {
-      setIsAssistantSpeaking(isPlaying);
+      setIsAudioPlaying(isPlaying);
     });
     return () => {
       audioPlayerRef.current?.stop();
@@ -95,6 +128,92 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const resumeAudio = useCallback(() => {
     audioPlayerRef.current?.resume();
     setIsAudioPaused(false);
+  }, []);
+
+  // Fetch AivisSpeech speakers
+  useEffect(() => {
+    fetch('/api/aivisspeech-speakers')
+      .then(res => res.json())
+      .then(data => {
+        if (data.speakers && data.speakers.length > 0) {
+          setAivisSpeakersList(data.speakers);
+          setIsAivisSpeechAvailable(true);
+        } else {
+          setIsAivisSpeechAvailable(false);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch AivisSpeech speakers:', err);
+        setIsAivisSpeechAvailable(false);
+      });
+  }, []);
+
+  // Load saved provider and speaker
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedProvider = localStorage.getItem('ttsProvider') as TTSProvider;
+      if (savedProvider === 'openai' || savedProvider === 'aivisspeech') {
+        setProviderState(savedProvider);
+      }
+      const savedSpeaker = localStorage.getItem('aivisSpeaker');
+      if (savedSpeaker) {
+        setAivisSpeakerState(parseInt(savedSpeaker, 10));
+      }
+    }
+  }, []);
+
+  const setProvider = useCallback((newProvider: TTSProvider) => {
+    setProviderState(newProvider);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ttsProvider', newProvider);
+    }
+    // Update session if connected
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+       wsRef.current.send(JSON.stringify({
+        type: 'session.update',
+        session: {
+          modalities: newProvider === 'openai' ? ['text', 'audio'] : ['text'],
+        }
+      }));
+    }
+  }, []);
+
+  const setAivisSpeaker = useCallback((styleId: number) => {
+    setAivisSpeakerState(styleId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('aivisSpeaker', styleId.toString());
+    }
+  }, []);
+
+  const synthesizeAndPlay = useCallback(async (text: string) => {
+    if (!text.trim()) return;
+    
+    setIsSynthesizing(true);
+    try {
+      const res = await fetch('/api/aivisspeech-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, styleId: aivisSpeakerRef.current })
+      });
+      
+      if (!res.ok) throw new Error('TTS failed');
+      
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      
+      const { pcmData, sampleRate } = parseWAVFile(data.audio);
+      const chunks = chunkPCMData(pcmData, 150, sampleRate);
+      
+      for (const chunk of chunks) {
+        const base64Chunk = arrayBufferToBase64(chunk);
+        await audioPlayerRef.current?.play(base64Chunk);
+      }
+    } catch (err) {
+      console.error('Synthesis error:', err);
+      setError('TTS Synthesis failed');
+    } finally {
+      setIsSynthesizing(false);
+    }
   }, []);
 
   // Add effect to update mouth open amount based on audio volume
@@ -176,7 +295,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         ws.send(JSON.stringify({
           type: 'session.update',
           session: {
-            modalities: ['text', 'audio'],
+            modalities: provider === 'openai' ? ['text', 'audio'] : ['text'],
             voice: selectedVoice,
             input_audio_transcription: {
               model: 'whisper-1',
@@ -318,8 +437,36 @@ Available expressions:
             }
             break;
 
+          case 'response.text.delta':
+            setCurrentAssistantDelta(prev => prev + message.delta);
+            if (!currentResponseIdRef.current) {
+              currentResponseIdRef.current = message.response_id;
+            }
+            break;
+
+          case 'response.text.done':
+            const text = message.text;
+            if (text) {
+              setAssistantResponses(prev => [
+                ...prev,
+                {
+                  id: message.response_id,
+                  text: text,
+                  timestamp: Date.now()
+                }
+              ]);
+              setCurrentAssistantDelta('');
+              
+              if (provider === 'aivisspeech') {
+                synthesizeAndPlay(text);
+              }
+            }
+            break;
+
           case 'response.audio.delta':
-            audioPlayerRef.current?.play(message.delta);
+            if (provider === 'openai') {
+              audioPlayerRef.current?.play(message.delta);
+            }
             break;
 
           case 'response.audio.done':
@@ -411,7 +558,7 @@ Available expressions:
       console.error('Failed to connect:', err);
       setError(err instanceof Error ? err.message : 'Failed to connect');
     }
-  }, [selectedVoice, playAnimation, setExpression]);
+  }, [selectedVoice, playAnimation, setExpression, provider, synthesizeAndPlay]);
 
   const startSession = async () => {
     setError(null);
@@ -481,7 +628,14 @@ Available expressions:
         interruptAudio,
         pauseAudio,
         resumeAudio,
-        mouthOpenAmount
+        mouthOpenAmount,
+        provider,
+        setProvider,
+        aivisSpeaker,
+        setAivisSpeaker,
+        aivisSpeakersList,
+        isAivisSpeechAvailable,
+        isSynthesizing
       }}
     >
       {children}

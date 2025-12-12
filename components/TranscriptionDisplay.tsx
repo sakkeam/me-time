@@ -24,7 +24,14 @@ export default function TranscriptionDisplay() {
     isAudioPaused,
     interruptAudio,
     pauseAudio,
-    resumeAudio
+    resumeAudio,
+    provider,
+    setProvider,
+    aivisSpeaker,
+    setAivisSpeaker,
+    aivisSpeakersList,
+    isAivisSpeechAvailable,
+    isSynthesizing
   } = useRealtime();
 
   const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
@@ -170,42 +177,102 @@ export default function TranscriptionDisplay() {
           {/* Controls */}
           <div className="flex flex-col items-center gap-4">
             {!isConnected && (
-              <div className="flex flex-wrap justify-center gap-2 max-w-2xl">
-                {VOICES.map((voice) => (
-                  <div 
-                    key={voice.id}
-                    onClick={() => setSelectedVoice(voice.id)}
-                    className={`
-                      flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer transition-all border backdrop-blur-sm
-                      ${selectedVoice === voice.id 
-                        ? 'bg-blue-600/80 border-blue-400 text-white shadow-lg scale-105' 
-                        : 'bg-gray-800/60 border-gray-600 text-gray-300 hover:bg-gray-700/80'}
-                    `}
+              <div className="flex flex-col items-center gap-4 mb-6 w-full max-w-2xl">
+                
+                {/* Provider Selector */}
+                <div className="flex bg-black/40 rounded-full p-1 backdrop-blur-sm">
+                  <button
+                    onClick={() => setProvider('openai')}
+                    className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                      provider === 'openai'
+                        ? 'bg-white text-black shadow-lg'
+                        : 'text-white/70 hover:text-white'
+                    }`}
                   >
-                    <span className="text-sm font-medium">{voice.label}</span>
-                    <button
-                      onClick={(e) => handlePreview(voice.id, e)}
-                      className={`
-                        p-1 rounded-full hover:bg-white/20 transition-colors
-                        ${previewingVoice === voice.id ? 'text-blue-200' : 'text-gray-400'}
-                      `}
-                    >
-                      {previewingVoice === voice.id ? (
-                        previewLoading ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          <Square size={14} fill="currentColor" />
-                        )
-                      ) : (
-                        <Volume2 size={14} />
-                      )}
-                    </button>
+                    OpenAI Voice
+                  </button>
+                  <button
+                    onClick={() => isAivisSpeechAvailable && setProvider('aivisspeech')}
+                    disabled={!isAivisSpeechAvailable}
+                    className={`px-6 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                      provider === 'aivisspeech'
+                        ? 'bg-white text-black shadow-lg'
+                        : !isAivisSpeechAvailable 
+                          ? 'text-white/30 cursor-not-allowed'
+                          : 'text-white/70 hover:text-white'
+                    }`}
+                    title={!isAivisSpeechAvailable ? "AivisSpeech Engine not available" : ""}
+                  >
+                    AivisSpeech
+                    {!isAivisSpeechAvailable && (
+                      <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                    )}
+                  </button>
+                </div>
+
+                {/* Voice/Speaker Selector */}
+                {provider === 'openai' ? (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {VOICES.map((voice) => (
+                      <div 
+                        key={voice.id}
+                        onClick={() => setSelectedVoice(voice.id)}
+                        className={`
+                          flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer transition-all border backdrop-blur-sm
+                          ${selectedVoice === voice.id 
+                            ? 'bg-blue-600/80 border-blue-400 text-white shadow-lg scale-105' 
+                            : 'bg-gray-800/60 border-gray-600 text-gray-300 hover:bg-gray-700/80'}
+                        `}
+                      >
+                        <span className="text-sm font-medium">{voice.label}</span>
+                        <button
+                          onClick={(e) => handlePreview(voice.id, e)}
+                          className={`
+                            p-1 rounded-full hover:bg-white/20 transition-colors
+                            ${previewingVoice === voice.id ? 'text-blue-200' : 'text-gray-400'}
+                          `}
+                        >
+                          {previewingVoice === voice.id ? (
+                            previewLoading ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Square size={14} fill="currentColor" />
+                            )
+                          ) : (
+                            <Volume2 size={14} />
+                          )}
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div className="flex flex-wrap justify-center gap-2 max-h-48 overflow-y-auto p-2 custom-scrollbar w-full">
+                    {aivisSpeakersList.flatMap(speaker => 
+                      speaker.styles.map(style => ({
+                        ...style,
+                        speakerName: speaker.name,
+                        uuid: speaker.speaker_uuid
+                      }))
+                    ).map((style) => (
+                      <button
+                        key={`${style.uuid}-${style.id}`}
+                        onClick={() => setAivisSpeaker(style.id)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all border border-white/10 flex flex-col items-center ${
+                          aivisSpeaker === style.id
+                            ? 'bg-white text-black shadow-lg scale-105'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'
+                        }`}
+                      >
+                        <span className="opacity-70 text-xs">{style.speakerName}</span>
+                        <span className="font-bold">{style.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="flex justify-center gap-2">
+            <div className="flex justify-center gap-2 items-center">
               {!isConnected ? (
                 <button
                   onClick={startSession}
@@ -214,12 +281,20 @@ export default function TranscriptionDisplay() {
                   Start Conversation
                 </button>
               ) : (
-                <button
-                  onClick={stopSession}
-                  className="px-6 py-2 bg-red-600/90 hover:bg-red-700 text-white rounded-full shadow-lg backdrop-blur-sm transition-all font-medium text-sm"
-                >
-                  Stop
-                </button>
+                <>
+                  <button
+                    onClick={stopSession}
+                    className="px-6 py-2 bg-red-600/90 hover:bg-red-700 text-white rounded-full shadow-lg backdrop-blur-sm transition-all font-medium text-sm"
+                  >
+                    Stop
+                  </button>
+                  {isSynthesizing && (
+                    <div className="flex items-center gap-2 text-white/70 bg-black/40 px-3 py-1 rounded-full text-sm backdrop-blur-sm animate-pulse">
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Synthesizing...</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

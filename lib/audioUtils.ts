@@ -374,3 +374,77 @@ export class AudioPlayer {
     this.dataArray = null;
   }
 }
+
+export function parseWAVFile(base64WAV: string): { 
+  pcmData: ArrayBuffer, 
+  sampleRate: number,
+  channels: number 
+} {
+  const binaryString = atob(base64WAV);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  
+  const dataView = new DataView(bytes.buffer);
+  
+  // Parse RIFF header
+  // "RIFF" at bytes 0-3
+  // File size at bytes 4-7
+  // "WAVE" at bytes 8-11
+  
+  // Find chunks
+  let offset = 12; // Start after "RIFF" + size + "WAVE"
+  let sampleRate = 44100;
+  let numChannels = 1;
+  let pcmData: ArrayBuffer | null = null;
+
+  while (offset < bytes.length - 8) {
+    const chunkId = String.fromCharCode(...Array.from(bytes.slice(offset, offset + 4)));
+    const chunkSize = dataView.getUint32(offset + 4, true);
+    
+    if (chunkId === 'fmt ') {
+      // Parse fmt chunk
+      // audioFormat at offset + 8 (2 bytes)
+      numChannels = dataView.getUint16(offset + 10, true);
+      sampleRate = dataView.getUint32(offset + 12, true);
+      // bitsPerSample at offset + 22 (2 bytes)
+    } else if (chunkId === 'data') {
+      pcmData = bytes.buffer.slice(offset + 8, offset + 8 + chunkSize);
+      // We found the data, we can stop if we already have fmt info, 
+      // but usually fmt comes before data.
+      if (pcmData) break;
+    }
+    
+    offset += 8 + chunkSize;
+  }
+  
+  if (!pcmData) {
+    throw new Error('No data chunk found in WAV file');
+  }
+
+  return { pcmData, sampleRate, channels: numChannels };
+}
+
+export function chunkPCMData(pcmData: ArrayBuffer, chunkSizeMs: number, sampleRate: number): ArrayBuffer[] {
+  const bytesPerSample = 2; // Int16
+  const samplesPerMs = sampleRate / 1000;
+  const chunkSizeSamples = Math.floor(chunkSizeMs * samplesPerMs);
+  const chunkSizeBytes = chunkSizeSamples * bytesPerSample;
+  
+  const chunks: ArrayBuffer[] = [];
+  for (let i = 0; i < pcmData.byteLength; i += chunkSizeBytes) {
+    chunks.push(pcmData.slice(i, Math.min(i + chunkSizeBytes, pcmData.byteLength)));
+  }
+  return chunks;
+}
+
+export function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
