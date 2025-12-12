@@ -445,20 +445,20 @@ Available expressions:
             break;
 
           case 'response.text.done':
-            const text = message.text;
-            if (text) {
+            const doneText = message.text;
+            if (doneText) {
               setAssistantResponses(prev => [
                 ...prev,
                 {
                   id: message.response_id,
-                  text: text,
+                  text: doneText,
                   timestamp: Date.now()
                 }
               ]);
               setCurrentAssistantDelta('');
               
               if (provider === 'aivisspeech') {
-                synthesizeAndPlay(text);
+                synthesizeAndPlay(doneText);
               }
             }
             break;
